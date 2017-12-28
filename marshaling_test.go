@@ -24,7 +24,7 @@ func TestJSONMarshaler_Marshal(t *testing.T) {
 	require.Equal(t, expected, d)
 
 	m.Indent = true
-	d, ct, err = m.Marshal(v)
+	d, _, err = m.Marshal(v)
 	require.NoError(t, err)
 	require.Equal(t, expectedIndented, d)
 }
