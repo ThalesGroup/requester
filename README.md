@@ -271,7 +271,7 @@ be used directly as the request body:
 ```go
 req, _ := requests.Request(
     requests.Post("http://api.com"),
-    requests.ContentType(sling.ContentTypeJSON),
+    requests.ContentType(requests.ContentTypeJSON),
     requests.Body(`{"color":"red"}`),
 )
 httputil.DumpRequest(req, true)

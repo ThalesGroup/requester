@@ -194,7 +194,7 @@ func cloneHeader(h http.Header) http.Header {
 // Clone returns a deep copy of a Requests.  Useful inheriting and adding settings from
 // a parent Requests without modifying the parent.  For example,
 //
-//     parent, _ := sling.New(Get("https://api.io/"))
+//     parent, _ := requests.New(Get("https://api.io/"))
 //     foo := parent.Clone()
 //     foo.Apply(Get("foo/"))
 // 	   bar := parent.Clone()

@@ -141,7 +141,7 @@ func TestAddHeader(t *testing.T) {
 	}{
 		{[]Option{AddHeader("authorization", "OAuth key=\"value\"")}, http.Header{"Authorization": {"OAuth key=\"value\""}}},
 		// header keys should be canonicalized
-		{[]Option{AddHeader("content-tYPE", "application/json"), AddHeader("User-AGENT", "sling")}, http.Header{"Content-Type": {"application/json"}, "User-Agent": {"sling"}}},
+		{[]Option{AddHeader("content-tYPE", "application/json"), AddHeader("User-AGENT", "requests")}, http.Header{"Content-Type": {"application/json"}, "User-Agent": {"requests"}}},
 		// values for existing keys should be appended
 		{[]Option{AddHeader("A", "B"), AddHeader("a", "c")}, http.Header{"A": {"B", "c"}}},
 	}
