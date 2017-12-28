@@ -1,6 +1,6 @@
 PACKAGES = $$(go list ./... | grep -v /examples)
 
-all: fmt vet lint test
+all: tools ensure fmt vet lint test
 
 test:
 	go test $(PACKAGES) -cover
@@ -17,3 +17,6 @@ vet:
 tools:
 	go get -u github.com/golang/dep/cmd/dep
 	go get -u github.com/golang/lint/golint
+
+ensure:
+	dep ensure

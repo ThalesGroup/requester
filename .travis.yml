@@ -3,7 +3,3 @@ language: go
 go:
   - 1.9
   - tip
-
-install:
-  - make tools
-  - dep ensure
