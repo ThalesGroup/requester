@@ -6,3 +6,4 @@ go:
 
 install:
   - make tools
+  - dep ensure
