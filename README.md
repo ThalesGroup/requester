@@ -1,4 +1,4 @@
-# Requests [![Build Status](https://travis-ci.org/ansel1/requests.svg?branch=master)](https://travis-ci.org/ansel1/requests) [![GoDoc](https://godoc.org/github.com/ansel1/requests?status.png)](https://godoc.org/github.com/ansel1/requests) [![Go Report Card](https://goreportcard.com/badge/github.com/ansel1/requests)](https://goreportcard.com/github.com/ansel1/requests)
+# Requests [![Build Status](https://travis-ci.org/ansel1/requests.svg?branch=master)](https://travis-ci.org/ansel1/requests) [![GoDoc](https://godoc.org/github.com/ansel1/requests?status.png)](https://godoc.org/github.com/ansel1/requests) [![Go Report Card](https://goreportcard.com/badge/github.com/ansel1/requests)](https://goreportcard.com/report/github.com/ansel1/requests)
 
 A.K.A "Yet Another Golang Requests Package"
 
