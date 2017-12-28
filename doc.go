@@ -1,179 +1,321 @@
 /*
-Package sling is a Go HTTP client library for creating and sending API requests.
+Package requests is Go library for HTTP clients.  It's a thin wrapper around the
+`http` package, which makes it a little easier to create and send requests.
 
-Slings store HTTP Request properties to simplify sending requests and decoding
-responses. Check the examples to learn how to compose a Sling into your API
-client.
+Examples:
 
-Usage
+```go
+resp, body, err := requests.Receive(nil, requests.Get("http://www.google.com"))
+if err != nil { return err }
 
-Use a Sling to set path, method, header, query, or body properties and create an
-http.Request.
+fmt.Printf("%d %s", resp.StatusCode, body)
+```
 
-	type Params struct {
-	    Count int `url:"count,omitempty"`
-	}
-	params := &Params{Count: 5}
+```go
+var respStruct Resource
 
-	req, err := sling.New().Get("https://example.com").QueryStruct(params).Request()
-	client.Do(req)
+resp, body, err := requests.Receive(&respStruct,
+    requests.JSON(),
+    requests.Get("http://www.google.com")
+)
+if err != nil { return err }
 
-Path
+fmt.Printf("%d %s %v", resp.StatusCode, body, respStruct)
+```
 
-Use Path to set or extend the URL for created Requests. Extension means the
-path will be resolved relative to the existing URL.
+Requests revolves around the use of `Option`s, which are arguments to the functions which
+create and/or send requests.  Options can be be used to set headers, query parameters, compose
+the URL, set the method, install middleware, configure or replace the HTTP client used
+to send the request, etc.
 
-	// creates a GET request to https://example.com/foo/bar
-	req, err := sling.New().Base("https://example.com/").Path("foo/").Path("bar").Request()
+The package-level `Request(...Option)` function creates an (unsent) `*http.Request`:
 
-Use Get, Post, Put, Patch, Delete, or Head which are exactly the same as Path
-except they set the HTTP method too.
+```go
+req, err := requests.Request(Get("http://www.google.com"))
+```
 
-	req, err := sling.New().Post("http://upload.com/gophers")
+The `Do(...Option)` function both creates the request and sends it, using the `http.DefaultClient`:
 
-Headers
+```go
+resp, err := requests.Do(Get("http://www.google.com"))
+```
 
-Add or Set headers for requests created by a Sling.
+A raw `*http.Response` is returned.  It is the
+caller's responsibility to close the response body, just as with `http.Client`'s `Do()` method.
 
-	s := sling.New().Base(baseUrl).Set("User-Agent", "Gophergram API Client")
-	req, err := s.New().Get("gophergram/list").Request()
+The package also has `Receive(interface{}, ...Option)` and `ReceiveFull(interface{},interface{},...Option)`
+functions which handle reading the response and optionally unmarshaling the body into a struct:
 
-QueryStruct
+```go
+var user User
+resp, body, err := requests.Receive(&user, requests.Get("http://api.com/users/bob"))
+```
 
-Define url parameter structs (https://godoc.org/github.com/google/go-querystring/query).
-Use QueryStruct to encode a struct as query parameters on requests.
+The `Receive*()` functions read and close the response body for you, return the entire response
+body as a string, and optionally unmarshal the response body into a struct.  If you only want
+the body back as a string, pass nil as the first argument.  The string body is returned either way.
+Requests can handle JSON and XML response bodies, as determined by the response's `Content-Type`
+header.  Other types of bodies can be handled by using a custom `Unmarshaler`.
 
-	// Github Issue Parameters
-	type IssueParams struct {
-	    Filter    string `url:"filter,omitempty"`
-	    State     string `url:"state,omitempty"`
-	    Labels    string `url:"labels,omitempty"`
-	    Sort      string `url:"sort,omitempty"`
-	    Direction string `url:"direction,omitempty"`
-	    Since     string `url:"since,omitempty"`
-	}
+If you have an API which returns structured non-2XX responses (like an error response JSON
+body), you can use the `ReceiveFull()` function to pass an alternate struct value to unmarhal the
+error response body into:
 
-	githubBase := sling.New().Base("https://api.github.com/").Client(httpClient)
+```go
+ var user User
+ var apiError APIError
+ resp, body, err := requests.ReceiveFull(&user, &apiError, requests.Get("http://api.com/users/bob"))
+```
 
-	path := fmt.Sprintf("repos/%s/%s/issues", owner, repo)
-	params := &IssueParams{Sort: "updated", State: "open"}
-	req, err := githubBase.New().Get(path).QueryStruct(params).Request()
+All these functions have `*Context()` variants, which add a `context.Context` to the request.  This is
+particularly useful for setting a request timeout:
 
-Json Body
+```go
+ctx = context.WithTimeout(ctx, 10 * time.Second)
+requests.RequestContext(ctx, Get("http://www.google.com"))
+requests.DoContext(ctx, Get("http://www.google.com"))
+requests.ReceiveContext(ctx, &into, Get("http://www.google.com"))
+requests.ReceiveFullContext(ctx, &into, &apierr, Get("http://www.google.com"))
+```
 
-Define JSON tagged structs (https://golang.org/pkg/encoding/json/).
-Use BodyJSON to JSON encode a struct as the Body on requests.
+# Requests Instance
 
-	type IssueRequest struct {
-	    Title     string   `json:"title,omitempty"`
-	    Body      string   `json:"body,omitempty"`
-	    Assignee  string   `json:"assignee,omitempty"`
-	    Milestone int      `json:"milestone,omitempty"`
-	    Labels    []string `json:"labels,omitempty"`
-	}
+The package level functions just delegate to the `DefaultRequests` variable, which holds
+a `Requests` instance.  An instance of `Requests` is useful for building a re-usable, composable
+HTTP client.
 
-	githubBase := sling.New().Base("https://api.github.com/").Client(httpClient)
-	path := fmt.Sprintf("repos/%s/%s/issues", owner, repo)
+A new `Requests` can be constructed with `New(...Options)`:
 
-	body := &IssueRequest{
-	    Title: "Test title",
-	    Body:  "Some issue",
-	}
-	req, err := githubBase.New().Post(path).BodyJSON(body).Request()
+```go
+reqs, err := requests.New(
+    requests.Get("http://api.server/resources/1"),
+    requests.JSON(),
+    requests.Accept(requests.ContentTypeJSON)
+)
+```
 
-Requests will include an "application/json" Content-Type header.
+...or can be created with a literal:
 
-Form Body
+```go
+u, err := url.Parse("http://api.server/resources/1")
+if err != nil { return err }
 
-Define url tagged structs (https://godoc.org/github.com/google/go-querystring/query).
-Use BodyForm to form url encode a struct as the Body on requests.
+reqs := &Requests{
+    URL: u,
+    Method: "GET",
+    Header: http.Header{
+        requests.HeaderContentType: []string{requests.ContentTypeJSON),
+        requests.HeaderAccept: []string{requests.ContentTypeJSON),
+    },
+}
+```
 
-	type StatusUpdateParams struct {
-	    Status             string   `url:"status,omitempty"`
-	    InReplyToStatusId  int64    `url:"in_reply_to_status_id,omitempty"`
-	    MediaIds           []int64  `url:"media_ids,omitempty,comma"`
-	}
+Additional options can be applied with Apply():
 
-	tweetParams := &StatusUpdateParams{Status: "writing some Go"}
-	req, err := twitterBase.New().Post(path).BodyForm(tweetParams).Request()
+```go
+err := reqs.Apply(requests.Method("POST"), requests.Body(bodyStruct))
+if err != nil { return err }
+```
 
-Requests will include an "application/x-www-form-urlencoded" Content-Type
-header.
+...or can just be set directly:
 
-Plain Body
+```go
+reqs.Method = "POST"
+reqs.Body = bodyStruct
+```
 
-Use Body to set a plain io.Reader on requests created by a Sling.
+`Requests` can be cloned, creating a copy which can be further configured:
 
-	body := strings.NewReader("raw body")
-	req, err := sling.New().Base("https://example.com").Body(body).Request()
+```go
+base, _ := requests.New(
+    requests.URL("https://api.com"),
+    requests.JSON(),
+    requests.Accept(requests.ContentTypeJSON),
+    requests.BearerAuth(token),
+)
 
-Set a content type header, if desired (e.g. Set("Content-Type", "text/plain")).
+getResource = base.Clone()
+getResource.Apply(requests.RelativeURL("resources/1"))
+```
 
-Extend a Sling
+`With(...Option)` combines `Clone()` and `Apply(...Option)`:
 
-Each Sling generates an http.Request (say with some path and query params)
-each time Request() is called, based on its state. When creating
-different slings, you may wish to extend an existing Sling to minimize
-duplication (e.g. a common client).
+```go
+getResource, _ := base.With(requests.RelativeURL("resources/1"))
+```
 
-Each Sling instance provides a New() method which creates an independent copy,
-so setting properties on the child won't mutate the parent Sling.
+Options can also be passed to the Request/Do/Receive* methods.  These Options will only
+be applied to the particular request, not the `Requests` instance:
 
-	const twitterApi = "https://api.twitter.com/1.1/"
-	base := sling.New().Base(twitterApi).Client(authClient)
+```go
+resp, body, err := base.Receive(nil, requests.Get("resources", "1")  // path elements
+                                                                     // will be joined.
+```
 
-	// statuses/show.json Sling
-	tweetShowSling := base.New().Get("statuses/show.json").QueryStruct(params)
-	req, err := tweetShowSling.Request()
+# Request Options
 
-	// statuses/update.json Sling
-	tweetPostSling := base.New().Post("statuses/update.json").BodyForm(params)
-	req, err := tweetPostSling.Request()
+The `Requests` struct has attributes mirror counterparts on `*http.Request`:
 
-Without the calls to base.New(), tweetShowSling and tweetPostSling would
-reference the base Sling and POST to
-"https://api.twitter.com/1.1/statuses/show.json/statuses/update.json", which
-is undesired.
+```go
+Method string
+URL    *url.URL
+Header http.Header
+GetBody          func() (io.ReadCloser, error)
+ContentLength    int64
+TransferEncoding []string
+Close            bool
+Host             string
+Trailer          http.Header
+```
 
-Recap: If you wish to extend a Sling, create a new child copy with New().
+If not set, the constructed `*http.Request`s will have the normal default values these
+attributes have after calling `http.NewRequest()` (some attributes will be initialized,
+some remained zeroed).
 
-Receive
+If set, then the `Requests`' values will overwrite the values of these attributes in the
+`*http.Request`.
 
-Define a JSON struct to decode a type from 2XX success responses. Use
-ReceiveSuccess(successV interface{}) to send a new Request and decode the
-response body into successV if it succeeds.
+Functional `Options` are defined which set most of these attributes.  You can configure
+`Requests` either by applying `Option`s, or by simply setting the attributes directly.
 
-	// Github Issue (abbreviated)
-	type Issue struct {
-	    Title  string `json:"title"`
-	    Body   string `json:"body"`
-	}
+# Client Options
 
-	issues := new([]Issue)
-	resp, err := githubBase.New().Get(path).QueryStruct(params).ReceiveSuccess(issues)
-	fmt.Println(issues, resp, err)
+The HTTP client used to execute requests can also be customized through options:
 
-Most APIs return failure responses with JSON error details. To decode these,
-define success and failure JSON structs. Use
-Receive(successV, failureV interface{}) to send a new Request that will
-automatically decode the response into the successV for 2XX responses or into
-failureV for non-2XX responses.
+```go
+requests.Do(requests.Get("https://api.com"), requests.Client(clients.SkipVerify()))
+```
 
-	type GithubError struct {
-	    Message string `json:"message"`
-	    Errors  []struct {
-	        Resource string `json:"resource"`
-	        Field    string `json:"field"`
-	        Code     string `json:"code"`
-	    } `json:"errors"`
-	    DocumentationURL string `json:"documentation_url"`
-	}
+`github.com/ansel1/requests/clients` is a standalone package for constructing and configuring
+`http.Client`s.  The `requests.Client(...clients.Option)` option constructs a new HTTP client
+and installs it into `Requests.Doer`.
 
-	issues := new([]Issue)
-	githubError := new(GithubError)
-	resp, err := githubBase.New().Get(path).QueryStruct(params).Receive(issues, githubError)
-	fmt.Println(issues, githubError, resp, err)
+# Query Params
 
-Pass a nil successV or failureV argument to skip JSON decoding into that value.
+The `QueryParams` attribute will be merged into any query parameters encoded into the
+URL.  For example:
+
+```go
+reqs, _ := requests.New(requests.URL("http://test.com?color=red"))
+reqs.QueryParams = url.Values("flavor":[]string{"vanilla"})
+r, _ := reqs.Request()
+r.URL.String()             // http://test.com?color=red&flavor=vanilla
+```
+
+The `QueryParams()` option can take a `map[string]interface{}` or `url.Values`, or accepts
+a struct value, which is marshaled into a `url.Values` using `github.com/google/go-querystring`:
+
+```go
+type Params struct {
+    Color string `url:"color"`
+}
+
+reqs, _ := requests.New(
+    requests.URL("http://test.com"),
+    requests.QueryParams(Params{Color:"blue"}),
+    requests.QueryParams(map[string][]string{"flavor":[]string{"vanilla"}}),
+)
+r, _ := reqs.Request()
+r.URL.String()             // http://test.com?color=blue,flavor=vanilla
+```
+
+# Body
+
+If `Requests.Body` is set to a `string`, `[]byte`, or `io.Reader`, the value will
+be used directly as the request body:
+
+```go
+req, _ := requests.Request(
+    requests.Post("http://api.com"),
+    requests.ContentType(requests.ContentTypeJSON),
+    requests.Body(`{"color":"red"}`),
+)
+httputil.DumpRequest(req, true)
+
+// POST / HTTP/1.1
+// Host: api.com
+// Content-Type: application/json
+//
+// {"color":"red"}
+```
+
+If `Body` is any other value, it will be marshaled into the body, using the
+`Marshaler`:
+
+```go
+type Resource struct {
+    Color string `json:"color"`
+}
+
+req, _ := requests.Request(
+    requests.Post("http://api.com"),
+    requests.Body(Resource{Color:"red"}),
+)
+httputil.DumpRequest(req, true)
+
+// POST / HTTP/1.1
+// Host: api.com
+// Content-Type: application/json
+//
+// {"color":"red"}
+```
+
+Note the default marshaler is JSON, and sets the `Content-Type` header.
+
+# Receive
+
+`Receive()` handles the response as well:
+
+```go
+type Resource struct {
+    Color string `json:"color"`
+}
+
+var res Resource
+
+resp, body, err := requests.Receive(&res, requests.Get("http://api.com/resources/1")
+if err != nil { return err }
+
+fmt.Println(body)     // {"color":"red"}
+```
+
+The body of the response is returned as a string.  If the first argument is not nil, the body will
+also be unmarshaled into that value.
+
+By default, the unmarshaler will use the response's `Content-Type` header to determine how to unmarshal
+the response body into a struct.  This can be customized by setting `Requests.Unmarshaler`:
+
+```go
+reqs.Unmarshaler = &requests.XML(true)                  // via assignment
+reqs.Apply(requests.Unmarshaler(&requests.XML(true)))   // or via an Option
+```
+
+# Doer and Middleware
+
+`Requests` uses an implementation of `Doer` to execute requests.  By default, `http.DefaultClient` is used,
+but this can be replaced by a customize client, or a mock `Doer`:
+
+```go
+reqs.Doer = requests.DoerFunc(func(req *http.Request) (*http.Response, error) {
+    return &http.Response{}
+})
+```
+
+You can also install middleware into `Requests`, which can intercept the request and response:
+
+```go
+mw := func(next requests.Doer) requests.Doer {
+    return requests.DoerFunc(func(req *http.Request) (*http.Response, error) {
+        fmt.Println(httputil.DumpRequest(req, true))
+        resp, err := next(req)
+        if err == nil {
+            fmt.Println(httputil.DumpResponse(resp, true))
+        }
+        return resp, err
+    })
+}
+reqs.Middleware = append(reqs.Middleware, mw)   // via assignment
+reqs.Apply(requests.Use(mw))                    // or via option
+```
 */
 package requests
