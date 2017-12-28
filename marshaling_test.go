@@ -2,9 +2,9 @@ package requests
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestJSONMarshaler_Marshal(t *testing.T) {
