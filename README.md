@@ -402,8 +402,3 @@ the main functions (`Request()`, `Do()`, `Receive()`) on the struct and the pack
 around as arguments or accumulated in slices.
 
 
-# Todo
-
-- Retries
-- Compression
-- Multipart
