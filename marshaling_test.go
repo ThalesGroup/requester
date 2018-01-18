@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"net/url"
 	"testing"
 )
 
@@ -108,10 +109,41 @@ func TestMultiUnmarshaler_Unmarshal(t *testing.T) {
 }
 
 func TestFormMarshaler_Marshal(t *testing.T) {
-	m := FormMarshaler{}
-	d, ct, err := m.Marshal(testModel{"red", 30})
-	require.NoError(t, err)
 
-	assert.Equal(t, "application/x-www-form-urlencoded", ct)
-	assert.Equal(t, "color=red&count=30", string(d))
+	testCases := []struct {
+		input  interface{}
+		output string
+	}{
+		{
+			input:  testModel{"red", 30},
+			output: "color=red&count=30",
+		},
+		{
+			input:  map[string][]string{"color": {"green", "red"}, "count": {"40"}},
+			output: "color=green&color=red&count=40",
+		},
+		{
+			input:  url.Values{"color": {"green", "red"}, "count": {"40"}},
+			output: "color=green&color=red&count=40",
+		},
+		{
+			input:  map[string]string{"color": "green", "count": "40"},
+			output: "color=green&count=40",
+		},
+	}
+	for _, testCase := range testCases {
+		m := FormMarshaler{}
+		d, ct, err := m.Marshal(testCase.input)
+
+		require.NoError(t, err)
+		assert.Equal(t, "application/x-www-form-urlencoded", ct)
+		assert.Equal(t, testCase.output, string(d))
+	}
+
+	//m := FormMarshaler{}
+	//d, ct, err := m.Marshal(testModel{"red", 30})
+	//require.NoError(t, err)
+	//
+	//assert.Equal(t, "application/x-www-form-urlencoded", ct)
+	//assert.Equal(t, "color=red&count=30", string(d))
 }

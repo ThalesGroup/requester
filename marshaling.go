@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"github.com/ansel1/merry"
 	goquery "github.com/google/go-querystring/query"
 	"net/url"
 	"strings"
@@ -98,7 +99,7 @@ func (m *XMLMarshaler) Marshal(v interface{}) (data []byte, contentType string, 
 
 // FormMarshaler implements BodyMarshaler.  It marshals values into URL-Encoded form data.
 //
-// The value can be either a map[string][]string, url.Values, or a struct with `url` tags.
+// The value can be either a map[string][]string, map[string]string, url.Values, or a struct with `url` tags.
 type FormMarshaler struct{}
 
 // Marshal implements BodyMarshaler.
@@ -107,12 +108,18 @@ func (*FormMarshaler) Marshal(v interface{}) (data []byte, contentType string, e
 	case map[string][]string:
 		urlV := url.Values(t)
 		return []byte(urlV.Encode()), ContentTypeForm, nil
+	case map[string]string:
+		urlV := url.Values{}
+		for key, value := range t {
+			urlV.Set(key, value)
+		}
+		return []byte(urlV.Encode()), ContentTypeForm, nil
 	case url.Values:
 		return []byte(t.Encode()), ContentTypeForm, nil
 	default:
 		values, err := goquery.Values(v)
 		if err != nil {
-			return nil, "", err
+			return nil, "", merry.Prepend(err, "invalid form struct")
 		}
 		return []byte(values.Encode()), ContentTypeForm, nil
 	}

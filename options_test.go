@@ -239,6 +239,7 @@ func TestQueryParams(t *testing.T) {
 		{[]Option{QueryParams(paramsA, paramsB)}, url.Values{"limit": []string{"30"}, "kind_name": []string{"recent"}, "count": []string{"25"}}},
 		{[]Option{QueryParams(url.Values{"red": []string{"green"}})}, url.Values{"red": []string{"green"}}},
 		{[]Option{QueryParams(map[string][]string{"red": []string{"green"}})}, url.Values{"red": []string{"green"}}},
+		{[]Option{QueryParams(map[string]string{"red": "green"})}, url.Values{"red": []string{"green"}}},
 	}
 
 	for _, c := range cases {

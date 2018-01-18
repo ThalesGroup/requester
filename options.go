@@ -210,7 +210,8 @@ func RelativeURL(paths ...string) Option {
 }
 
 // QueryParams adds params to the Requests.QueryParams member.
-// The arguments may be either map[string][]string, url.Values, or a struct.
+// The arguments may be either map[string][]string, map[string]string,
+// url.Values, or a struct.
 // The argument values are merged into Requests.QueryParams, overriding existing
 // values.
 //
@@ -234,6 +235,11 @@ func QueryParams(queryStructs ...interface{}) Option {
 			case nil:
 			case map[string][]string:
 				values = url.Values(t)
+			case map[string]string:
+				values = url.Values{}
+				for key, value := range t {
+					values.Set(key, value)
+				}
 			case url.Values:
 				values = t
 			default:
