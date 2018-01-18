@@ -346,11 +346,17 @@ func (r *Requests) SendContext(ctx context.Context, opts ...Option) (*http.Respo
 	if err != nil {
 		return nil, err
 	}
-	doer := reqs.Doer
+	return reqs.Do(req)
+}
+
+// Do implements Doer.  Executes the request using the configured
+// Doer and Middleware.
+func (r *Requests) Do(req *http.Request) (*http.Response, error) {
+	doer := r.Doer
 	if doer == nil {
 		doer = http.DefaultClient
 	}
-	return Wrap(doer, reqs.Middleware...).Do(req)
+	return Wrap(doer, r.Middleware...).Do(req)
 }
 
 // Receive creates a new HTTP request and returns the response. Success
