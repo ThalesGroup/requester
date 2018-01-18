@@ -3,7 +3,7 @@ package requests
 import (
 	"encoding/base64"
 	"github.com/ansel1/merry"
-	"github.com/ansel1/requests/clients"
+	"github.com/gemalto/requests/clients"
 	goquery "github.com/google/go-querystring/query"
 	"net/http"
 	"net/url"

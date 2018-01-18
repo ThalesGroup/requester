@@ -186,7 +186,7 @@ The HTTP client used to execute requests can also be customized through options:
 requests.Send(requests.Get("https://api.com"), requests.Client(clients.SkipVerify()))
 ```
 
-`github.com/ansel1/requests/clients` is a standalone package for constructing and configuring
+`github.com/gemalto/requests/clients` is a standalone package for constructing and configuring
 `http.Client`s.  The `requests.Client(...clients.Option)` option constructs a new HTTP client
 and installs it into `Requests.Doer`.
 

@@ -1,4 +1,4 @@
-# Requests [![Build Status](https://travis-ci.org/ansel1/requests.svg?branch=master)](https://travis-ci.org/ansel1/requests) [![GoDoc](https://godoc.org/github.com/ansel1/requests?status.png)](https://godoc.org/github.com/ansel1/requests) [![Go Report Card](https://goreportcard.com/badge/github.com/ansel1/requests)](https://goreportcard.com/report/github.com/ansel1/requests)
+# Requests [![Build Status](https://travis-ci.org/gemalto/requests.svg?branch=master)](https://travis-ci.org/gemalto/requests) [![GoDoc](https://godoc.org/github.com/gemalto/requests?status.png)](https://godoc.org/github.com/gemalto/requests) [![Go Report Card](https://goreportcard.com/badge/github.com/gemalto/requests)](https://goreportcard.com/report/github.com/gemalto/requests)
 
 A.K.A "Yet Another Golang Requests Package"
 
@@ -232,7 +232,7 @@ The HTTP client used to execute requests can also be customized through options:
 requests.Do(requests.Get("https://api.com"), requests.Client(clients.SkipVerify()))
 ```
     
-`github.com/ansel1/requests/clients` is a standalone package for constructing and configuring
+`github.com/gemalto/requests/clients` is a standalone package for constructing and configuring
 `http.Client`s.  The `requests.Client(...clients.Option)` option constructs a new HTTP client
 and installs it into `Requests.Doer`.
 
