@@ -346,7 +346,7 @@ func Form() Option {
 // will be created and configured using the `clients` package.
 func Client(opts ...clients.Option) Option {
 	return OptionFunc(func(b *Requests) error {
-		c, err := clients.NewClient(opts...)
+		c, err := clients.New(opts...)
 		if err != nil {
 			return err
 		}

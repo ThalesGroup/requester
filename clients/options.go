@@ -11,7 +11,7 @@ import (
 
 // NoRedirects configures the client to no perform any redirects.
 func NoRedirects() Option {
-	return ClientOptionFunc(func(client *http.Client, _ *http.Transport) error {
+	return OptionFunc(func(client *http.Client) error {
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		}
@@ -22,7 +22,7 @@ func NoRedirects() Option {
 // MaxRedirects configures the max number of redirects the client will perform before
 // giving up.
 func MaxRedirects(max int) Option {
-	return ClientOptionFunc(func(client *http.Client, _ *http.Transport) error {
+	return OptionFunc(func(client *http.Client) error {
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			if len(via) >= max {
 				return merry.Errorf("stopped after max %d requests", len(via))
@@ -37,7 +37,7 @@ func MaxRedirects(max int) Option {
 //
 // The argument will be nil.
 func CookieJar(opts *cookiejar.Options) Option {
-	return ClientOptionFunc(func(client *http.Client, _ *http.Transport) error {
+	return OptionFunc(func(client *http.Client) error {
 		jar, err := cookiejar.New(opts)
 		if err != nil {
 			return merry.Wrap(err)
@@ -49,12 +49,12 @@ func CookieJar(opts *cookiejar.Options) Option {
 
 // ProxyURL will proxy all calls through a single proxy URL.
 func ProxyURL(proxyURL string) Option {
-	return ClientOptionFunc(func(_ *http.Client, transport *http.Transport) error {
+	return TransportOption(func(t *http.Transport) error {
 		u, err := url.Parse(proxyURL)
 		if err != nil {
 			return merry.Wrap(err)
 		}
-		transport.Proxy = func(request *http.Request) (*url.URL, error) {
+		t.Proxy = func(request *http.Request) (*url.URL, error) {
 			return u, nil
 		}
 		return nil
@@ -63,15 +63,15 @@ func ProxyURL(proxyURL string) Option {
 
 // ProxyFunc configures the client's proxy function.
 func ProxyFunc(f func(request *http.Request) (*url.URL, error)) Option {
-	return ClientOptionFunc(func(_ *http.Client, transport *http.Transport) error {
-		transport.Proxy = f
+	return TransportOption(func(t *http.Transport) error {
+		t.Proxy = f
 		return nil
 	})
 }
 
 // Timeout configures the client's Timeout property.
 func Timeout(d time.Duration) Option {
-	return ClientOptionFunc(func(client *http.Client, transport *http.Transport) error {
+	return OptionFunc(func(client *http.Client) error {
 		client.Timeout = d
 		return nil
 	})
@@ -79,11 +79,8 @@ func Timeout(d time.Duration) Option {
 
 // SkipVerify sets the TLS config's InsecureSkipVerify flag.
 func SkipVerify(skip bool) Option {
-	return ClientOptionFunc(func(client *http.Client, transport *http.Transport) error {
-		if transport.TLSClientConfig == nil {
-			transport.TLSClientConfig = &tls.Config{}
-		}
-		transport.TLSClientConfig.InsecureSkipVerify = skip
+	return TLSOption(func(c *tls.Config) error {
+		c.InsecureSkipVerify = skip
 		return nil
 	})
 }

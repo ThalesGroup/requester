@@ -2,6 +2,8 @@
 
 A.K.A "Yet Another Golang Requests Package"
 
+EXPERIMENTAL:  Until the version reaches 1.0, the API may change.
+
 Requests makes it a bit simpler to use Go's `http` package as a client.  As an example, take
 a simple request, with the `http` package:
 
