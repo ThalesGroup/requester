@@ -30,7 +30,7 @@ func TestRequestContext(t *testing.T) {
 	assert.Equal(t, "green", req.Context().Value(colorContextKey))
 }
 
-func TestDo(t *testing.T) {
+func TestSend(t *testing.T) {
 	client, mux, server := testServer()
 	defer server.Close()
 
@@ -38,13 +38,13 @@ func TestDo(t *testing.T) {
 		w.WriteHeader(204)
 	})
 
-	resp, err := Do(Get("http://blue.com/red"), WithDoer(client))
+	resp, err := Send(Get("http://blue.com/red"), WithDoer(client))
 	require.NoError(t, err)
 
 	assert.Equal(t, 204, resp.StatusCode)
 }
 
-func TestDoContext(t *testing.T) {
+func TestSendContext(t *testing.T) {
 	client, mux, server := testServer()
 	defer server.Close()
 
@@ -53,7 +53,7 @@ func TestDoContext(t *testing.T) {
 	})
 
 	var ctx context.Context
-	resp, err := DoContext(
+	resp, err := SendContext(
 		context.WithValue(context.Background(), colorContextKey, "blue"),
 		Get("http://blue.com/red"),
 		WithDoer(client),

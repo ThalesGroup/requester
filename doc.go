@@ -34,10 +34,10 @@ The package-level `Request(...Option)` function creates an (unsent) `*http.Reque
 req, err := requests.Request(Get("http://www.google.com"))
 ```
 
-The `Do(...Option)` function both creates the request and sends it, using the `http.DefaultClient`:
+The `Send(...Option)` function both creates the request and sends it, using the `http.DefaultClient`:
 
 ```go
-resp, err := requests.Do(Get("http://www.google.com"))
+resp, err := requests.Send(Get("http://www.google.com"))
 ```
 
 A raw `*http.Response` is returned.  It is the
@@ -73,7 +73,7 @@ particularly useful for setting a request timeout:
 ```go
 ctx = context.WithTimeout(ctx, 10 * time.Second)
 requests.RequestContext(ctx, Get("http://www.google.com"))
-requests.DoContext(ctx, Get("http://www.google.com"))
+requests.SendContext(ctx, Get("http://www.google.com"))
 requests.ReceiveContext(ctx, &into, Get("http://www.google.com"))
 requests.ReceiveFullContext(ctx, &into, &apierr, Get("http://www.google.com"))
 ```
@@ -144,7 +144,7 @@ getResource.Apply(requests.RelativeURL("resources/1"))
 getResource, _ := base.With(requests.RelativeURL("resources/1"))
 ```
 
-Options can also be passed to the Request/Do/Receive* methods.  These Options will only
+Options can also be passed to the Request/Send/Receive methods.  These Options will only
 be applied to the particular request, not the `Requests` instance:
 
 ```go
@@ -183,7 +183,7 @@ Functional `Options` are defined which set most of these attributes.  You can co
 The HTTP client used to execute requests can also be customized through options:
 
 ```go
-requests.Do(requests.Get("https://api.com"), requests.Client(clients.SkipVerify()))
+requests.Send(requests.Get("https://api.com"), requests.Client(clients.SkipVerify()))
 ```
 
 `github.com/ansel1/requests/clients` is a standalone package for constructing and configuring

@@ -25,8 +25,8 @@ import (
 //
 // Or you can use the Requests
 // to construct and send requests (via a configurable Doer) and
-// get back the raw *http.Response, with the Do() and
-// DoContext() methods.
+// get back the raw *http.Response, with the Send() and
+// SendContext() methods.
 //
 // Or you can have Requests also read the response body and
 // unmarshal it into a struct, with Receive(), ReceiveContext(),
@@ -59,10 +59,10 @@ import (
 //     reqs2, err := reqs.With(Header("X-Frame","1"))
 //
 // The remaining methods of Requests are for creating HTTP requests, sending them, and handling
-// the responses: Request, Do, Receive, and ReceiveFull.
+// the responses: Request, Send, Receive, and ReceiveFull.
 //
 //     req, err        := reqs.Request()           // create a requests
-//     resp, err       := reqs.Do()                // create and send a request
+//     resp, err       := reqs.Send()                // create and send a request
 //
 //     var m Resource
 //     resp, body, err := reqs.Receive(&m)         // create and send request, read and unmarshal response
@@ -71,7 +71,7 @@ import (
 //     resp, body, err := reqs.ReceiveFull(&m, &e) // create and send request, read response, unmarshal 2XX responses
 //                                                 // into m, and other responses in e
 //
-// Request, Do, Receive, and ReceiveFull all accept a varargs of Options, which will be applied
+// Request, Send, Receive, and ReceiveFull all accept a varargs of Options, which will be applied
 // only to a single request, not to the Requests object.
 //
 //     req, err 	   := reqs.Request(
@@ -79,7 +79,7 @@ import (
 //                          Body(bob),
 //                        )
 //
-// RequestContext, DoContext, ReceiveContext, and ReceiveFullContext variants accept a context, which is
+// RequestContext, SendContext, ReceiveContext, and ReceiveFullContext variants accept a context, which is
 // attached to the constructed request:
 //
 //     req, err        := reqs.RequestContext(ctx)
@@ -319,18 +319,18 @@ func (r *Requests) getRequestBody() (body io.Reader, contentType string, err err
 	}
 }
 
-// Do executes a request with the Doer.  The response body is not closed:
+// Send executes a request with the Doer.  The response body is not closed:
 // it is the caller's responsibility to close the response body.
 // If the caller prefers the body as a byte slice, or prefers the body
 // unmarshaled into a struct, see the Receive methods below.
 //
 // Additional options arguments can be passed.  They will be applied to this request only.
-func (r *Requests) Do(opts ...Option) (*http.Response, error) {
-	return r.DoContext(context.Background(), opts...)
+func (r *Requests) Send(opts ...Option) (*http.Response, error) {
+	return r.SendContext(context.Background(), opts...)
 }
 
-// DoContext does the same as Request, but requires a context.
-func (r *Requests) DoContext(ctx context.Context, opts ...Option) (*http.Response, error) {
+// SendContext does the same as Request, but requires a context.
+func (r *Requests) SendContext(ctx context.Context, opts ...Option) (*http.Response, error) {
 	// if there are request options, apply them now, rather than passing them
 	// to RequestContext().  Options may modify the Middleware or the Doer, and
 	// we want to honor those options as well as the ones which affect the request.
@@ -380,7 +380,7 @@ func (r *Requests) ReceiveFull(successV, failureV interface{}, opts ...Option) (
 
 // ReceiveFullContext does the same as ReceiveFull
 func (r *Requests) ReceiveFullContext(ctx context.Context, successV, failureV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
-	resp, err = r.DoContext(ctx, opts...)
+	resp, err = r.SendContext(ctx, opts...)
 	if err != nil {
 		return
 	}

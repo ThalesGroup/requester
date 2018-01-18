@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-// DefaultRequests is the singleton used by the package-level Request/Do/Receive functions.
+// DefaultRequests is the singleton used by the package-level Request/Send/Receive functions.
 var DefaultRequests = Requests{}
 
 // Request does the same as Requests.Request(), using the DefaultRequests.
@@ -18,14 +18,14 @@ func RequestContext(ctx context.Context, opts ...Option) (*http.Request, error) 
 	return DefaultRequests.RequestContext(ctx, opts...)
 }
 
-// Do does the same as Requests.Do(), using the DefaultRequests.
-func Do(opts ...Option) (*http.Response, error) {
-	return DefaultRequests.Do(opts...)
+// Send does the same as Requests.Send(), using the DefaultRequests.
+func Send(opts ...Option) (*http.Response, error) {
+	return DefaultRequests.Send(opts...)
 }
 
-// DoContext does the same as Requests.DoContext(), using the DefaultRequests.
-func DoContext(ctx context.Context, opts ...Option) (*http.Response, error) {
-	return DefaultRequests.DoContext(ctx, opts...)
+// SendContext does the same as Requests.SendContext(), using the DefaultRequests.
+func SendContext(ctx context.Context, opts ...Option) (*http.Response, error) {
+	return DefaultRequests.SendContext(ctx, opts...)
 }
 
 // ReceiveContext does the same as Requests.ReceiveContext(), using the DefaultRequests.

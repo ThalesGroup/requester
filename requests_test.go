@@ -360,7 +360,7 @@ func TestRequests_Request_options(t *testing.T) {
 	assert.Equal(t, "http://test.com/blue", req.URL.String())
 }
 
-func TestRequests_DoContext(t *testing.T) {
+func TestRequests_SendContext(t *testing.T) {
 	cl, mux, srv := testServer()
 	defer srv.Close()
 
@@ -368,13 +368,13 @@ func TestRequests_DoContext(t *testing.T) {
 	require.NoError(t, err)
 	reqs.Doer = cl
 
-	// DoContext() just creates a request and sends it to the Doer.  That's all we're confirming here
+	// SendContext() just creates a request and sends it to the Doer.  That's all we're confirming here
 	mux.HandleFunc("/server", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(204)
 	})
 
 	var capturedCtx context.Context
-	resp, err := reqs.DoContext(
+	resp, err := reqs.SendContext(
 		context.WithValue(context.Background(), colorContextKey, "purple"),
 		Use(captureRequestContextMiddleware(&capturedCtx)),
 	)
@@ -387,15 +387,15 @@ func TestRequests_DoContext(t *testing.T) {
 	assert.Equal(t, "purple", capturedCtx.Value(colorContextKey), "context should be passed through")
 	assert.Empty(t, reqs.Middleware, "option arguments should have only affected that request, should not have leaked back into the Requests objects")
 
-	t.Run("Do", func(t *testing.T) {
-		// same as DoContext, just without the context.
-		resp, err := reqs.Do()
+	t.Run("Send", func(t *testing.T) {
+		// same as SendContext, just without the context.
+		resp, err := reqs.Send()
 		require.NoError(t, err)
 		assert.Equal(t, 204, resp.StatusCode)
 
 		t.Run("options", func(t *testing.T) {
 			reqs := Requests{Doer: cl}
-			resp, err := reqs.Do(Get("http://blue.com/server"))
+			resp, err := reqs.Send(Get("http://blue.com/server"))
 			require.NoError(t, err)
 			require.Equal(t, 204, resp.StatusCode)
 		})
