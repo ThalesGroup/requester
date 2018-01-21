@@ -8,4 +8,3 @@ URLs, which might be fragments or query params
 - Retries
 - Compression
 - Multipart
-- some of the method param and receiver naming is inconsistent

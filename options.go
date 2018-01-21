@@ -169,9 +169,9 @@ func BearerAuth(token string) Option {
 
 // URL sets the request URL.  Returns an error if arg is not
 // a valid URL.
-func URL(p string) Option {
+func URL(rawurl string) Option {
 	return OptionFunc(func(b *Requests) error {
-		u, err := url.Parse(p)
+		u, err := url.Parse(rawurl)
 		if err != nil {
 			return merry.Prepend(err, "invalid url")
 		}

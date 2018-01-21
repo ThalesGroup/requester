@@ -10,36 +10,36 @@ import (
 )
 
 func TestRequests_With(t *testing.T) {
-	b, err := New(Method("red"))
+	reqs, err := New(Method("red"))
 	require.NoError(t, err)
-	b2, err := b.With(Method("green"))
+	reqs2, err := reqs.With(Method("green"))
 	require.NoError(t, err)
 	// should clone first, then apply
-	require.Equal(t, "green", b2.Method)
-	require.Equal(t, "red", b.Method)
+	require.Equal(t, "green", reqs2.Method)
+	require.Equal(t, "red", reqs.Method)
 
 	t.Run("errors", func(t *testing.T) {
-		b, err := New(Method("green"))
+		reqs, err := New(Method("green"))
 		require.NoError(t, err)
-		b2, err := b.With(Method("red"), RelativeURL("cache_object:foo/bar"))
+		reqs2, err := reqs.With(Method("red"), RelativeURL("cache_object:foo/bar"))
 		require.Error(t, err)
-		require.Nil(t, b2)
-		require.Equal(t, "green", b.Method)
+		require.Nil(t, reqs2)
+		require.Equal(t, "green", reqs.Method)
 	})
 }
 
 func TestRequests_Apply(t *testing.T) {
-	b, err := New(Method("red"))
+	reqs, err := New(Method("red"))
 	require.NoError(t, err)
-	err = b.Apply(Method("green"))
+	err = reqs.Apply(Method("green"))
 	require.NoError(t, err)
 	// applies in place
-	require.Equal(t, "green", b.Method)
+	require.Equal(t, "green", reqs.Method)
 
 	t.Run("errors", func(t *testing.T) {
-		err := b.Apply(URL("cache_object:foo/bar"))
+		err := reqs.Apply(URL("cache_object:foo/bar"))
 		require.Error(t, err)
-		require.Nil(t, b.URL)
+		require.Nil(t, reqs.URL)
 	})
 }
 
@@ -47,10 +47,10 @@ func TestURL(t *testing.T) {
 	cases := []string{"http://a.io/", "http://b.io", "/relPath", "relPath", ""}
 	for _, base := range cases {
 		t.Run("", func(t *testing.T) {
-			b, errFromNew := New(URL(base))
+			reqs, errFromNew := New(URL(base))
 			u, err := url.Parse(base)
 			if err == nil {
-				require.Equal(t, u, b.URL)
+				require.Equal(t, u, reqs.URL)
 			} else {
 				require.EqualError(t, errFromNew, err.Error())
 			}
@@ -58,9 +58,9 @@ func TestURL(t *testing.T) {
 	}
 
 	t.Run("errors", func(t *testing.T) {
-		b, err := New(URL("cache_object:foo/bar"))
+		reqs, err := New(URL("cache_object:foo/bar"))
 		require.Error(t, err)
-		require.Nil(t, b)
+		require.Nil(t, reqs)
 	})
 }
 
@@ -91,24 +91,24 @@ func TestRelativeURL(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run("", func(t *testing.T) {
-			b, err := New()
+			reqs, err := New()
 			require.NoError(t, err)
 			if c.base != "" {
-				err := b.Apply(URL(c.base))
+				err := reqs.Apply(URL(c.base))
 				require.NoError(t, err)
 			}
-			err = b.Apply(RelativeURL(c.relPath))
+			err = reqs.Apply(RelativeURL(c.relPath))
 			require.NoError(t, err)
-			require.Equal(t, c.expected, b.URL.String())
+			require.Equal(t, c.expected, reqs.URL.String())
 		})
 	}
 
 	t.Run("errors", func(t *testing.T) {
-		b, err := New(URL("http://test.com/red"))
+		reqs, err := New(URL("http://test.com/red"))
 		require.NoError(t, err)
-		err = b.Apply(RelativeURL("cache_object:foo/bar"))
+		err = reqs.Apply(RelativeURL("cache_object:foo/bar"))
 		require.Error(t, err)
-		require.Equal(t, "http://test.com/red", b.URL.String())
+		require.Equal(t, "http://test.com/red", reqs.URL.String())
 	})
 }
 
@@ -127,9 +127,9 @@ func TestMethod(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run("", func(t *testing.T) {
-			b, err := New(c.options...)
+			reqs, err := New(c.options...)
 			require.NoError(t, err)
-			require.Equal(t, c.expectedMethod, b.Method)
+			require.Equal(t, c.expectedMethod, reqs.Method)
 		})
 	}
 }
@@ -147,9 +147,9 @@ func TestAddHeader(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run("", func(t *testing.T) {
-			b, err := New(c.options...)
+			reqs, err := New(c.options...)
 			require.NoError(t, err)
-			require.Equal(t, c.expectedHeader, b.Header)
+			require.Equal(t, c.expectedHeader, reqs.Header)
 		})
 	}
 }
@@ -165,10 +165,10 @@ func TestHeader(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run("", func(t *testing.T) {
-			b, err := New(c.options...)
+			reqs, err := New(c.options...)
 			require.NoError(t, err)
 			// type conversion from Header to alias'd map for deep equality comparison
-			require.Equal(t, c.expectedHeader, b.Header)
+			require.Equal(t, c.expectedHeader, reqs.Header)
 		})
 	}
 }
@@ -187,9 +187,9 @@ func TestBasicAuth(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run("", func(t *testing.T) {
-			b, err := New(c.options...)
+			reqs, err := New(c.options...)
 			require.NoError(t, err)
-			req, err := b.RequestContext(context.Background())
+			req, err := reqs.RequestContext(context.Background())
 			require.NoError(t, err)
 			username, password, ok := req.BasicAuth()
 			require.True(t, ok, "basic auth missing when expected")
@@ -206,23 +206,23 @@ func TestBearerAuth(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run("", func(t *testing.T) {
-			b, err := New(BearerAuth(c))
+			reqs, err := New(BearerAuth(c))
 			require.NoError(t, err)
 			if c == "" {
-				require.Empty(t, b.Header.Get("Authorization"))
+				require.Empty(t, reqs.Header.Get("Authorization"))
 			} else {
-				require.Equal(t, "Bearer "+c, b.Header.Get("Authorization"))
+				require.Equal(t, "Bearer "+c, reqs.Header.Get("Authorization"))
 			}
 		})
 	}
 
 	t.Run("clearing", func(t *testing.T) {
-		b, err := New(BearerAuth("green"))
+		reqs, err := New(BearerAuth("green"))
 		require.NoError(t, err)
-		err = b.Apply(BearerAuth(""))
+		err = reqs.Apply(BearerAuth(""))
 		require.NoError(t, err)
-		_, ok := b.Header["Authorization"]
-		require.False(t, ok, "should have removed Authorization header, instead was %s", b.Header.Get("Authorization"))
+		_, ok := reqs.Header["Authorization"]
+		require.False(t, ok, "should have removed Authorization header, instead was %s", reqs.Header.Get("Authorization"))
 	})
 }
 
@@ -244,9 +244,9 @@ func TestQueryParams(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run("", func(t *testing.T) {
-			b, err := New(c.options...)
+			reqs, err := New(c.options...)
 			require.NoError(t, err)
-			require.Equal(t, c.expectedParams, b.QueryParams)
+			require.Equal(t, c.expectedParams, reqs.QueryParams)
 		})
 	}
 }
@@ -267,9 +267,9 @@ func TestQueryParam(t *testing.T) {
 }
 
 func TestBody(t *testing.T) {
-	b, err := New(Body("hey"))
+	reqs, err := New(Body("hey"))
 	require.NoError(t, err)
-	require.Equal(t, "hey", b.Body)
+	require.Equal(t, "hey", reqs.Body)
 }
 
 type testMarshaler struct{}
@@ -284,48 +284,48 @@ func (*testMarshaler) Marshal(v interface{}) (data []byte, contentType string, e
 
 func TestMarshaler(t *testing.T) {
 	m := &testMarshaler{}
-	b, err := New(Marshaler(m))
+	reqs, err := New(Marshaler(m))
 	require.NoError(t, err)
-	require.Equal(t, m, b.Marshaler)
+	require.Equal(t, m, reqs.Marshaler)
 }
 
 func TestUnmarshaler(t *testing.T) {
 	m := &testMarshaler{}
-	b, err := New(Unmarshaler(m))
+	reqs, err := New(Unmarshaler(m))
 	require.NoError(t, err)
-	require.Equal(t, m, b.Unmarshaler)
+	require.Equal(t, m, reqs.Unmarshaler)
 }
 
 func TestJSON(t *testing.T) {
-	b, err := New(JSON(false))
+	reqs, err := New(JSON(false))
 	require.NoError(t, err)
-	if assert.IsType(t, &JSONMarshaler{}, b.Marshaler) {
-		assert.False(t, b.Marshaler.(*JSONMarshaler).Indent)
+	if assert.IsType(t, &JSONMarshaler{}, reqs.Marshaler) {
+		assert.False(t, reqs.Marshaler.(*JSONMarshaler).Indent)
 	}
 
-	err = b.Apply(JSON(true))
+	err = reqs.Apply(JSON(true))
 	require.NoError(t, err)
-	if assert.IsType(t, &JSONMarshaler{}, b.Marshaler) {
-		assert.True(t, b.Marshaler.(*JSONMarshaler).Indent)
+	if assert.IsType(t, &JSONMarshaler{}, reqs.Marshaler) {
+		assert.True(t, reqs.Marshaler.(*JSONMarshaler).Indent)
 	}
 }
 
 func TestXML(t *testing.T) {
-	b, err := New(XML(false))
+	reqs, err := New(XML(false))
 	require.NoError(t, err)
-	if assert.IsType(t, &XMLMarshaler{}, b.Marshaler) {
-		assert.False(t, b.Marshaler.(*XMLMarshaler).Indent)
+	if assert.IsType(t, &XMLMarshaler{}, reqs.Marshaler) {
+		assert.False(t, reqs.Marshaler.(*XMLMarshaler).Indent)
 	}
 
-	err = b.Apply(XML(true))
+	err = reqs.Apply(XML(true))
 	require.NoError(t, err)
-	if assert.IsType(t, &XMLMarshaler{}, b.Marshaler) {
-		assert.True(t, b.Marshaler.(*XMLMarshaler).Indent)
+	if assert.IsType(t, &XMLMarshaler{}, reqs.Marshaler) {
+		assert.True(t, reqs.Marshaler.(*XMLMarshaler).Indent)
 	}
 }
 
 func TestForm(t *testing.T) {
-	b, err := New(Form())
+	reqs, err := New(Form())
 	require.NoError(t, err)
-	assert.IsType(t, &FormMarshaler{}, b.Marshaler)
+	assert.IsType(t, &FormMarshaler{}, reqs.Marshaler)
 }
