@@ -262,6 +262,20 @@ func QueryParams(queryStructs ...interface{}) Option {
 	})
 }
 
+// QueryParam adds a query parameter.
+func QueryParam(k, v string) Option {
+	return OptionFunc(func(s *Requests) error {
+		if k == "" {
+			return nil
+		}
+		if s.QueryParams == nil {
+			s.QueryParams = url.Values{}
+		}
+		s.QueryParams.Add(k, v)
+		return nil
+	})
+}
+
 // Body sets Requests.Body
 func Body(body interface{}) Option {
 	return OptionFunc(func(b *Requests) error {

@@ -251,6 +251,21 @@ func TestQueryParams(t *testing.T) {
 	}
 }
 
+func TestQueryParam(t *testing.T) {
+	reqs, err := New(QueryParam("color", "red"))
+	require.NoError(t, err)
+
+	expected := url.Values{}
+	expected.Add("color", "red")
+	require.Equal(t, expected, reqs.QueryParams)
+
+	err = reqs.Apply(QueryParam("color", "blue"))
+	require.NoError(t, err)
+
+	expected.Add("color", "blue")
+	require.Equal(t, expected, reqs.QueryParams)
+}
+
 func TestBody(t *testing.T) {
 	b, err := New(Body("hey"))
 	require.NoError(t, err)
