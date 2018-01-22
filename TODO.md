@@ -3,7 +3,6 @@
 - RelativeURL("a", "b", "c") doesn't really work intuitively.  User probably means
 RelativeURL("a/", "b/", "c/").  Can't simply append a path sep either.  The args are just
 URLs, which might be fragments or query params
-- Option/Middleware to convert non-2xx responses to an error
 - Retries
 - Compression
 - Multipart

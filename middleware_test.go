@@ -5,6 +5,7 @@ import (
 	. "github.com/gemalto/requests"
 	"github.com/gemalto/requests/clientserver"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"testing"
 )
@@ -28,78 +29,27 @@ func TestDump(t *testing.T) {
 	assert.Contains(t, b.String(), `{"color":"red"}`)
 }
 
-//func NewClientServer(s *httptest.Server, options ...Option) *ClientServer {
-//	if s == nil {
-//		s = httptest.NewServer(nil)
-//	}
-//	t := &ClientServer{
-//		Server: s,
-//		Requests: &Requests{
-//			Doer: s.Client(),
-//		},
-//	}
-//	s.Config.Handler = t
-//
-//
-//	err := t.Apply(URL(s.URL), optionsSlice(options), Use(t.captureClientReqResp))
-//	if err != nil {
-//		panic(err)
-//	}
-//
-//	return t
-//}
-//
-//type optionsSlice []Option
-//
-//func (o optionsSlice) Apply(r *Requests) error {
-//	return r.Apply(o...)
-//}
-//
-//type ClientServer struct {
-//	*httptest.Server
-//	*Requests
-//	Handler http.Handler
-//
-//	LastSrvReq     *http.Request
-//	LastClientReq  *http.Request
-//	LastClientResp *http.Response
-//}
-//
-//func (t *ClientServer) Close() {
-//	t.Server.Close()
-//}
-//
-//func (t *ClientServer) Clear() {
-//	t.LastClientReq = nil
-//	t.LastClientResp = nil
-//	t.LastSrvReq = nil
-//}
-//
-//func (t *ClientServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-//	t.LastSrvReq = req
-//	if t.Handler != nil {
-//		t.Handler.ServeHTTP(w, req)
-//	}
-//}
-//
-//func (t *ClientServer) captureClientReqResp(next Doer) Doer {
-//	return DoerFunc(func(req *http.Request) (*http.Response, error) {
-//		t.LastClientReq = req
-//		resp, err := next.Do(req)
-//		t.LastClientResp = resp
-//		return resp, err
-//	})
-//}
-//
-//func (t *ClientServer) Mux() *http.ServeMux {
-//	if m, ok := t.Config.Handler.(*http.ServeMux); ok {
-//		return m
-//	}
-//	m := http.NewServeMux()
-//	t.Config.Handler = m
-//	return m
-//}
-//
-//func (t *ClientServer) HandlerFunc(hf http.HandlerFunc) {
-//	t.Handler = hf
-//}
+func TestNon2XXResponseAsError(t *testing.T) {
+	cs := clientserver.New(nil)
+	defer cs.Close()
+
+	cs.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(407)
+		w.Write([]byte("boom!"))
+	})
+
+	// without the middleware
+	resp, body, err := cs.Receive(nil)
+	require.NoError(t, err)
+	require.Equal(t, 407, resp.StatusCode)
+	require.Equal(t, "boom!", body)
+
+	// with the middleware
+	resp, _, err = cs.Receive(nil, Non2XXResponseAsError())
+
+	require.Error(t, err)
+	assert.Equal(t, 407, resp.StatusCode)
+
+	t.Log(err)
+
+}
