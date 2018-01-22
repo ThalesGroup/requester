@@ -1,4 +1,4 @@
-package requests
+package requester
 
 import (
 	"bytes"
@@ -11,44 +11,41 @@ import (
 	"strings"
 )
 
-// Requests is an HTTP Request builder and sender.
+// Requester is an HTTP request builder and HTTP client.
 //
-// A Requests object can be used to construct *http.Requests,
+// Requester can be used to construct requests,
 // send requests via a configurable HTTP client, and unmarshal
-// the response.  A Requests object is configured by setting
+// the response.  A Requester is configured by setting
 // its members, which in most cases mirror the members of
-// *http.Request, or by applying Options, using the Apply()
-// and With() methods.
+// *http.Request.  A Requester can also be configured by applying
+// functional Options, which simply modify Requester's members.
 //
-// Once configured, you can use Requests solely as a *http.Request
+// Once configured, you can use Requester solely as a *http.Request
 // factory, by calling Request() or RequestContext().
 //
-// Or you can use the Requests
-// to construct and send requests (via a configurable Doer) and
-// get back the raw *http.Response, with the Send() and
-// SendContext() methods.
+// Requester can both construct and send requests (via a configurable Doer)
+// with the Send() and SendContext() methods.
 //
-// Or you can have Requests also read the response body and
-// unmarshal it into a struct, with Receive(), ReceiveContext(),
-// ReceiveFull(), and ReceiveFullContext().
+// Finally, Requester can construct and send requests, and handle the responses
+// with Receive() and ReceiveContext().
 //
-// A Requests object can be constructed as a literal:
+// A Requester can be constructed as a literal:
 //
-//     r := requests.Requests{
+//     r := requester.Requester{
 //              URL:    u,
 //              Method: "POST",
 //              Body:   b,
 //          }
 //
-// ...or via the New() constructor:
+// ...or via the New() constructor, which takes functional Options:
 //
-//     reqs, err := requests.New(requests.Post("http://test.com/red"), requests.Body(b))
+//     reqs, err := requester.New(requester.Post("http://test.com/red"), requester.Body(b))
 //
 // Additional options can be applied with Apply():
 //
-//     err := reqs.Apply(Accept("application/json"))
+//     err := reqs.Apply(requester.Accept("application/json"))
 //
-// Requests can be cloned, to create an identically configured Requests object, which can
+// Requester can be cloned.  The clone can
 // then be further configured without affecting the parent:
 //
 //     reqs2 := reqs.Clone()
@@ -56,10 +53,10 @@ import (
 //
 // With() is equivalent to Clone() and Apply():
 //
-//     reqs2, err := reqs.With(Header("X-Frame","1"))
+//     reqs2, err := reqs.With(requester.Header("X-Frame","1"))
 //
-// The remaining methods of Requests are for creating HTTP requests, sending them, and handling
-// the responses: Request, Send, Receive, and ReceiveFull.
+// The remaining methods of Requester are for creating HTTP requests, sending them, and handling
+// the responses: Request(), Send(), and Receive().
 //
 //     req, err        := reqs.Request()           // create a requests
 //     resp, err       := reqs.Send()                // create and send a request
@@ -67,27 +64,23 @@ import (
 //     var m Resource
 //     resp, body, err := reqs.Receive(&m)         // create and send request, read and unmarshal response
 //
-//     var e ErrorResponse
-//     resp, body, err := reqs.ReceiveFull(&m, &e) // create and send request, read response, unmarshal 2XX responses
-//                                                 // into m, and other responses in e
-//
-// Request, Send, Receive, and ReceiveFull all accept a varargs of Options, which will be applied
-// only to a single request, not to the Requests object.
+// Request(), Send(), and Receive() all accept a varargs of Options, which will be applied
+// only to a single request, not to the Requester.
 //
 //     req, err 	   := reqs.Request(
-//                        	Put("users/bob"),
-//                          Body(bob),
+//                        	requester.Put("users/bob"),
+//                          requester.Body(bob),
 //                        )
 //
-// RequestContext, SendContext, ReceiveContext, and ReceiveFullContext variants accept a context, which is
+// RequestContext(), SendContext(), and ReceiveContext() variants accept a context, which is
 // attached to the constructed request:
 //
 //     req, err        := reqs.RequestContext(ctx)
 //
-type Requests struct {
+type Requester struct {
 	////////////////////////////////////////////////////////////////
 	//                                                            //
-	//  Attributes affecting the construction of http.Requests.   //
+	//  Attributes affecting the construction of http.Requester.   //
 	//                                                            //
 	////////////////////////////////////////////////////////////////
 
@@ -123,21 +116,21 @@ type Requests struct {
 	Body interface{}
 
 	// Marshaler will be used to marshal the Body value into the body
-	// of requests.  It is only used if Body is a struct value.
+	// of requester.  It is only used if Body is a struct value.
 	// Defaults to the DefaultMarshaler, which marshals to JSON.
 	//
-	// If no Content-Type header has been explicitly set in Requests.Header, the
+	// If no Content-Type header has been explicitly set in Requester.Header, the
 	// Marshaler will supply an appropriate one.
 	Marshaler BodyMarshaler
 
 	//////////////////////////////////////////////////////////////
 	//
-	//  Attributes related to sending requests and handling
+	//  Attributes related to sending requester and handling
 	//  responses.
 	//
 	////////////////////////////////////////////////////////////////
 
-	// Doer holds the HTTP client for used to execute requests.
+	// Doer holds the HTTP client for used to execute requester.
 	// Defaults to http.DefaultClient.
 	Doer Doer
 
@@ -151,9 +144,9 @@ type Requests struct {
 	Unmarshaler BodyUnmarshaler
 }
 
-// New returns a new Requests.
-func New(options ...Option) (*Requests, error) {
-	b := &Requests{}
+// New returns a new Requester.
+func New(options ...Option) (*Requester, error) {
+	b := &Requester{}
 	err := b.Apply(options...)
 	if err != nil {
 		return nil, merry.Wrap(err)
@@ -191,10 +184,10 @@ func cloneHeader(h http.Header) http.Header {
 	return h2
 }
 
-// Clone returns a deep copy of a Requests.  Useful inheriting and adding settings from
-// a parent Requests without modifying the parent.  For example,
+// Clone returns a deep copy of a Requester.  Useful inheriting and adding settings from
+// a parent Requester without modifying the parent.  For example,
 //
-//     parent, _ := requests.New(Get("https://api.io/"))
+//     parent, _ := requester.New(Get("https://api.io/"))
 //     foo := parent.Clone()
 //     foo.Apply(Get("foo/"))
 // 	   bar := parent.Clone()
@@ -202,7 +195,7 @@ func cloneHeader(h http.Header) http.Header {
 //
 // foo and bar will both use the same client, but send requests to
 // https://api.io/foo/ and https://api.io/bar/ respectively.
-func (r *Requests) Clone() *Requests {
+func (r *Requester) Clone() *Requester {
 	s2 := *r
 	s2.Header = cloneHeader(r.Header)
 	s2.Trailer = cloneHeader(r.Trailer)
@@ -222,7 +215,7 @@ func (r *Requests) Clone() *Requests {
 // If r.Body is an io.Reader, string, or []byte, it is set as the request
 // body directly, and no default Content-Type is set.
 //
-func (r *Requests) Request(opts ...Option) (*http.Request, error) {
+func (r *Requester) Request(opts ...Option) (*http.Request, error) {
 	return r.RequestContext(context.Background(), opts...)
 }
 
@@ -231,7 +224,7 @@ func (r *Requests) Request(opts ...Option) (*http.Request, error) {
 //
 //     req, err := r.RequestContext(context.WithTimeout(context.Background(), 10 * time.Seconds))
 //
-func (r *Requests) RequestContext(ctx context.Context, opts ...Option) (*http.Request, error) {
+func (r *Requester) RequestContext(ctx context.Context, opts ...Option) (*http.Request, error) {
 	reqs := r
 	if len(opts) > 0 {
 		var err error
@@ -295,8 +288,8 @@ func (r *Requests) RequestContext(ctx context.Context, opts ...Option) (*http.Re
 }
 
 // getRequestBody returns the io.Reader which should be used as the body
-// of new Requests.
-func (r *Requests) getRequestBody() (body io.Reader, contentType string, err error) {
+// of new Requester.
+func (r *Requester) getRequestBody() (body io.Reader, contentType string, err error) {
 	switch v := r.Body.(type) {
 	case nil:
 		return nil, "", nil
@@ -325,12 +318,12 @@ func (r *Requests) getRequestBody() (body io.Reader, contentType string, err err
 // unmarshaled into a struct, see the Receive methods below.
 //
 // Additional options arguments can be passed.  They will be applied to this request only.
-func (r *Requests) Send(opts ...Option) (*http.Response, error) {
+func (r *Requester) Send(opts ...Option) (*http.Response, error) {
 	return r.SendContext(context.Background(), opts...)
 }
 
 // SendContext does the same as Request, but requires a context.
-func (r *Requests) SendContext(ctx context.Context, opts ...Option) (*http.Response, error) {
+func (r *Requester) SendContext(ctx context.Context, opts ...Option) (*http.Response, error) {
 	// if there are request options, apply them now, rather than passing them
 	// to RequestContext().  Options may modify the Middleware or the Doer, and
 	// we want to honor those options as well as the ones which affect the request.
@@ -351,7 +344,7 @@ func (r *Requests) SendContext(ctx context.Context, opts ...Option) (*http.Respo
 
 // Do implements Doer.  Executes the request using the configured
 // Doer and Middleware.
-func (r *Requests) Do(req *http.Request) (*http.Response, error) {
+func (r *Requester) Do(req *http.Request) (*http.Response, error) {
 	doer := r.Doer
 	if doer == nil {
 		doer = http.DefaultClient
@@ -365,12 +358,12 @@ func (r *Requests) Do(req *http.Request) (*http.Response, error) {
 // is returned.
 //
 // If option arguments are passed, they are applied to this single request only.
-func (r *Requests) Receive(successV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
+func (r *Requester) Receive(successV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
 	return r.ReceiveFullContext(context.Background(), successV, nil, opts...)
 }
 
 // ReceiveContext does the same as Receive, but requires a context.
-func (r *Requests) ReceiveContext(ctx context.Context, successV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
+func (r *Requester) ReceiveContext(ctx context.Context, successV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
 	return r.ReceiveFullContext(ctx, successV, nil, opts...)
 }
 
@@ -379,13 +372,13 @@ func (r *Requests) ReceiveContext(ctx context.Context, successV interface{}, opt
 // other responses are unmarshaled into failureV.
 // Any error creating the request, sending it, or decoding the response is
 // returned.
-func (r *Requests) ReceiveFull(successV, failureV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
+func (r *Requester) ReceiveFull(successV, failureV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
 	return r.ReceiveFullContext(context.Background(), successV, failureV, opts...)
 
 }
 
 // ReceiveFullContext does the same as ReceiveFull
-func (r *Requests) ReceiveFullContext(ctx context.Context, successV, failureV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
+func (r *Requester) ReceiveFullContext(ctx context.Context, successV, failureV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
 	resp, err = r.SendContext(ctx, opts...)
 	if err != nil {
 		return

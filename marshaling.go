@@ -1,4 +1,4 @@
-package requests
+package requester
 
 import (
 	"encoding/json"
@@ -10,10 +10,10 @@ import (
 	"strings"
 )
 
-// DefaultMarshaler is used by Requests if Requests.Marshaler is nil.
+// DefaultMarshaler is used by Requester if Requester.Marshaler is nil.
 var DefaultMarshaler BodyMarshaler = &JSONMarshaler{}
 
-// DefaultUnmarshaler is used by Requests if Requests.Unmarshaler is nil.
+// DefaultUnmarshaler is used by Requester if Requester.Unmarshaler is nil.
 var DefaultUnmarshaler BodyUnmarshaler = &MultiUnmarshaler{}
 
 // BodyMarshaler marshals structs into a []byte, and supplies a matching
@@ -47,7 +47,7 @@ func (f UnmarshalFunc) Unmarshal(data []byte, contentType string, v interface{})
 // JSONMarshaler implement BodyMarshaler and BodyUnmarshaler.  It marshals values to and
 // from JSON.  If Indent is true, marshaled JSON will be indented.
 //
-//   r := requests.Requests{
+//   r := requester.Requester{
 //       Body: &JSONMarshaler{},
 //   }
 //
@@ -74,7 +74,7 @@ func (m *JSONMarshaler) Marshal(v interface{}) (data []byte, contentType string,
 // XMLMarshaler implements BodyMarshaler and BodyUnmarshaler.  It marshals values to
 // and from XML.  If Indent is true, marshaled XML will be indented.
 //
-//     r := requests.Requests{
+//     r := requester.Requester{
 //         Marshaler: &XMLMarshaler{},
 //     }
 //

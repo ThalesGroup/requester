@@ -1,9 +1,9 @@
-package requests
+package requester
 
 import (
 	"encoding/base64"
 	"github.com/ansel1/merry"
-	"github.com/gemalto/requests/clients"
+	"github.com/gemalto/requester/clients"
 	goquery "github.com/google/go-querystring/query"
 	"net/http"
 	"net/url"
@@ -20,27 +20,27 @@ const (
 	ContentTypeForm = "application/x-www-form-urlencoded"
 )
 
-// Option applies some setting to a Requests object.  Options can be passed
-// as arguments to most of Requests' methods.
+// Option applies some setting to a Requester object.  Options can be passed
+// as arguments to most of Requester' methods.
 type Option interface {
 
-	// Apply modifies the Requests argument.  The Requests pointer will never be nil.
+	// Apply modifies the Requester argument.  The Requester pointer will never be nil.
 	// Returning an error will stop applying the request of the Options, and the error
 	// will float up to the original caller.
-	Apply(*Requests) error
+	Apply(*Requester) error
 }
 
 // OptionFunc adapts a function to the Option interface.
-type OptionFunc func(*Requests) error
+type OptionFunc func(*Requester) error
 
 // Apply implements Option.
-func (f OptionFunc) Apply(r *Requests) error {
+func (f OptionFunc) Apply(r *Requester) error {
 	return f(r)
 }
 
-// With clones the Requests object, then applies the options
+// With clones the Requester object, then applies the options
 // to the clone.
-func (r *Requests) With(opts ...Option) (*Requests, error) {
+func (r *Requester) With(opts ...Option) (*Requester, error) {
 	r2 := r.Clone()
 	err := r2.Apply(opts...)
 	if err != nil {
@@ -50,7 +50,7 @@ func (r *Requests) With(opts ...Option) (*Requests, error) {
 }
 
 // Apply applies the options to the receiver.
-func (r *Requests) Apply(opts ...Option) error {
+func (r *Requester) Apply(opts ...Option) error {
 	for _, o := range opts {
 		err := o.Apply(r)
 		if err != nil {
@@ -64,7 +64,7 @@ func (r *Requests) Apply(opts ...Option) error {
 // If path arguments are passed, they will be applied
 // via the RelativeURL option.
 func Method(m string, paths ...string) Option {
-	return OptionFunc(func(r *Requests) error {
+	return OptionFunc(func(r *Requester) error {
 		r.Method = m
 		if len(paths) > 0 {
 			err := RelativeURL(paths...).Apply(r)
@@ -114,7 +114,7 @@ func Delete(paths ...string) Option {
 
 // AddHeader adds a header value, using Header.Add()
 func AddHeader(key, value string) Option {
-	return OptionFunc(func(b *Requests) error {
+	return OptionFunc(func(b *Requester) error {
 		if b.Header == nil {
 			b.Header = make(http.Header)
 		}
@@ -125,7 +125,7 @@ func AddHeader(key, value string) Option {
 
 // Header sets a header value, using Header.Set()
 func Header(key, value string) Option {
-	return OptionFunc(func(b *Requests) error {
+	return OptionFunc(func(b *Requester) error {
 		if b.Header == nil {
 			b.Header = make(http.Header)
 		}
@@ -136,7 +136,7 @@ func Header(key, value string) Option {
 
 // DeleteHeader deletes a header key, using Header.Del()
 func DeleteHeader(key string) Option {
-	return OptionFunc(func(b *Requests) error {
+	return OptionFunc(func(b *Requester) error {
 		b.Header.Del(key)
 		return nil
 	})
@@ -170,7 +170,7 @@ func BearerAuth(token string) Option {
 // URL sets the request URL.  Returns an error if arg is not
 // a valid URL.
 func URL(rawurl string) Option {
-	return OptionFunc(func(b *Requests) error {
+	return OptionFunc(func(b *Requester) error {
 		u, err := url.Parse(rawurl)
 		if err != nil {
 			return merry.Prepend(err, "invalid url")
@@ -184,16 +184,16 @@ func URL(rawurl string) Option {
 // the current URL, using the standard lib's url.URL.ResolveReference() method.
 // For example:
 //
-//     r, _ := requests.New(Get("http://test.com"), RelativeURL("red"))
+//     r, _ := requester.New(Get("http://test.com"), RelativeURL("red"))
 //     fmt.Println(r.URL.String())  // http://test.com/red
 //
 // Multiple arguments will be resolved in order:
 //
-//     r, _ := requests.New(Get("http://test.com"), RelativeURL("red", "blue"))
+//     r, _ := requester.New(Get("http://test.com"), RelativeURL("red", "blue"))
 //     fmt.Println(r.URL.String())  // http://test.com/red/blue
 //
 func RelativeURL(paths ...string) Option {
-	return OptionFunc(func(r *Requests) error {
+	return OptionFunc(func(r *Requester) error {
 		for _, p := range paths {
 			u, err := url.Parse(p)
 			if err != nil {
@@ -209,10 +209,10 @@ func RelativeURL(paths ...string) Option {
 	})
 }
 
-// QueryParams adds params to the Requests.QueryParams member.
+// QueryParams adds params to the Requester.QueryParams member.
 // The arguments may be either map[string][]string, map[string]string,
 // url.Values, or a struct.
-// The argument values are merged into Requests.QueryParams, overriding existing
+// The argument values are merged into Requester.QueryParams, overriding existing
 // values.
 //
 // If the arg is a struct, the struct is marshaled into a url.Values object using
@@ -225,7 +225,7 @@ func RelativeURL(paths ...string) Option {
 //
 // An error will be returned if marshaling the struct fails.
 func QueryParams(queryStructs ...interface{}) Option {
-	return OptionFunc(func(s *Requests) error {
+	return OptionFunc(func(s *Requester) error {
 		if s.QueryParams == nil {
 			s.QueryParams = url.Values{}
 		}
@@ -264,7 +264,7 @@ func QueryParams(queryStructs ...interface{}) Option {
 
 // QueryParam adds a query parameter.
 func QueryParam(k, v string) Option {
-	return OptionFunc(func(s *Requests) error {
+	return OptionFunc(func(s *Requester) error {
 		if k == "" {
 			return nil
 		}
@@ -276,25 +276,25 @@ func QueryParam(k, v string) Option {
 	})
 }
 
-// Body sets Requests.Body
+// Body sets Requester.Body
 func Body(body interface{}) Option {
-	return OptionFunc(func(b *Requests) error {
+	return OptionFunc(func(b *Requester) error {
 		b.Body = body
 		return nil
 	})
 }
 
-// Marshaler sets Requests.Marshaler
+// Marshaler sets Requester.Marshaler
 func Marshaler(m BodyMarshaler) Option {
-	return OptionFunc(func(b *Requests) error {
+	return OptionFunc(func(b *Requester) error {
 		b.Marshaler = m
 		return nil
 	})
 }
 
-// Unmarshaler sets Requests.Unmarshaler
+// Unmarshaler sets Requester.Unmarshaler
 func Unmarshaler(m BodyUnmarshaler) Option {
-	return OptionFunc(func(b *Requests) error {
+	return OptionFunc(func(b *Requester) error {
 		b.Unmarshaler = m
 		return nil
 	})
@@ -310,16 +310,16 @@ func ContentType(contentType string) Option {
 	return Header(HeaderContentType, contentType)
 }
 
-// Host sets Requests.Host
+// Host sets Requester.Host
 func Host(host string) Option {
-	return OptionFunc(func(b *Requests) error {
+	return OptionFunc(func(b *Requester) error {
 		b.Host = host
 		return nil
 	})
 }
 
 func joinOpts(opts ...Option) Option {
-	return OptionFunc(func(r *Requests) error {
+	return OptionFunc(func(r *Requester) error {
 		for _, opt := range opts {
 			err := opt.Apply(r)
 			if err != nil {
@@ -330,7 +330,7 @@ func joinOpts(opts ...Option) Option {
 	})
 }
 
-// JSON sets Requests.Marshaler to the JSONMarshaler.
+// JSON sets Requester.Marshaler to the JSONMarshaler.
 // If the arg is true, the generated JSON will be indented.
 // The JSONMarshaler will set the Content-Type header to
 // "application/json" unless explicitly overwritten.
@@ -342,7 +342,7 @@ func JSON(indent bool) Option {
 	)
 }
 
-// XML sets Requests.Marshaler to the XMLMarshaler.
+// XML sets Requester.Marshaler to the XMLMarshaler.
 // If the arg is true, the generated XML will be indented.
 // The XMLMarshaler will set the Content-Type header to
 // "application/xml" unless explicitly overwritten.
@@ -354,7 +354,7 @@ func XML(indent bool) Option {
 	)
 }
 
-// Form sets Requests.Marshaler to the FormMarshaler,
+// Form sets Requester.Marshaler to the FormMarshaler,
 // which marshals the body into form-urlencoded.
 // The FormMarshaler will set the Content-Type header to
 // "application/x-www-form-urlencoded" unless explicitly overwritten.
@@ -362,10 +362,10 @@ func Form() Option {
 	return Marshaler(&FormMarshaler{})
 }
 
-// Client replaces Requests.Doer with an *http.Client.  The client
+// Client replaces Requester.Doer with an *http.Client.  The client
 // will be created and configured using the `clients` package.
 func Client(opts ...clients.Option) Option {
-	return OptionFunc(func(b *Requests) error {
+	return OptionFunc(func(b *Requester) error {
 		c, err := clients.New(opts...)
 		if err != nil {
 			return err
@@ -375,19 +375,19 @@ func Client(opts ...clients.Option) Option {
 	})
 }
 
-// Use appends middlware to Requests.Middleware.  Middleware
+// Use appends middlware to Requester.Middleware.  Middleware
 // is invoked in the order added.
 func Use(m ...Middleware) Option {
-	return OptionFunc(func(r *Requests) error {
+	return OptionFunc(func(r *Requester) error {
 		r.Middleware = append(r.Middleware, m...)
 		return nil
 	})
 }
 
-// WithDoer replaces Requests.Doer.  If nil, Requests will
+// WithDoer replaces Requester.Doer.  If nil, Requester will
 // revert to using the http.DefaultClient.
 func WithDoer(d Doer) Option {
-	return OptionFunc(func(r *Requests) error {
+	return OptionFunc(func(r *Requester) error {
 		r.Doer = d
 		return nil
 	})

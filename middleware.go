@@ -1,4 +1,4 @@
-package requests
+package requester
 
 import (
 	"github.com/ansel1/merry"
@@ -18,9 +18,9 @@ import (
 //         }
 //     }
 //
-// Middleware can be applied to a Requests object with the Use() option:
+// Middleware can be applied to a Requester object with the Use() option:
 //
-//     reqs.Apply(requests.Use(loggingMiddleware))
+//     reqs.Apply(requester.Use(loggingMiddleware))
 //
 // Middleware itself is an Option, so it can also be applied directly:
 //
@@ -29,7 +29,7 @@ import (
 type Middleware func(Doer) Doer
 
 // Apply implements Option
-func (m Middleware) Apply(r *Requests) error {
+func (m Middleware) Apply(r *Requester) error {
 	r.Middleware = append(r.Middleware, m)
 	return nil
 }

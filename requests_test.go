@@ -1,12 +1,12 @@
-package requests_test
+package requester_test
 
 import (
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	. "github.com/gemalto/requests"
-	"github.com/gemalto/requests/clientserver"
+	. "github.com/gemalto/requester"
+	"github.com/gemalto/requester/clientserver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -62,7 +62,7 @@ func TestRequests_Clone(t *testing.T) {
 			require.Equal(t, reqs.Doer, child.Doer)
 			require.Equal(t, reqs.Method, child.Method)
 			require.Equal(t, reqs.URL, child.URL)
-			// Header should be a copy of parent Requests header. For example, calling
+			// Header should be a copy of parent Requester header. For example, calling
 			// baseSling.AddHeader("k","v") should not mutate previously created child Slings
 			assert.EqualValues(t, reqs.Header, child.Header)
 			if reqs.Header != nil {
@@ -198,7 +198,7 @@ func TestRequests_Request_Body(t *testing.T) {
 
 func TestRequests_Request_Marshaler(t *testing.T) {
 	var capturedV interface{}
-	reqs := Requests{
+	reqs := Requester{
 		Body: []string{"blue"},
 		Marshaler: MarshalFunc(func(v interface{}) ([]byte, string, error) {
 			capturedV = v
@@ -280,7 +280,7 @@ func TestRequests_Request_Host(t *testing.T) {
 }
 
 func TestRequests_Request_TransferEncoding(t *testing.T) {
-	reqs := Requests{}
+	reqs := Requester{}
 	req, err := reqs.RequestContext(context.Background())
 	require.NoError(t, err)
 	// should be empty by default
@@ -294,7 +294,7 @@ func TestRequests_Request_TransferEncoding(t *testing.T) {
 }
 
 func TestRequests_Request_Close(t *testing.T) {
-	reqs := Requests{}
+	reqs := Requester{}
 	req, err := reqs.RequestContext(context.Background())
 	require.NoError(t, err)
 	// should be false by default
@@ -308,7 +308,7 @@ func TestRequests_Request_Close(t *testing.T) {
 }
 
 func TestRequests_Request_Trailer(t *testing.T) {
-	reqs := Requests{}
+	reqs := Requester{}
 	req, err := reqs.RequestContext(context.Background())
 	require.NoError(t, err)
 	// should be empty by default
@@ -322,7 +322,7 @@ func TestRequests_Request_Trailer(t *testing.T) {
 }
 
 func TestRequests_Request_Header(t *testing.T) {
-	reqs := Requests{}
+	reqs := Requester{}
 	req, err := reqs.RequestContext(context.Background())
 	require.NoError(t, err)
 	// should be empty by default
@@ -336,21 +336,21 @@ func TestRequests_Request_Header(t *testing.T) {
 }
 
 func TestRequests_Request_Context(t *testing.T) {
-	reqs := Requests{}
+	reqs := Requester{}
 	req, err := reqs.RequestContext(context.WithValue(context.Background(), colorContextKey, "red"))
 	require.NoError(t, err)
 	require.Equal(t, "red", req.Context().Value(colorContextKey))
 }
 
 func TestRequests_Request(t *testing.T) {
-	reqs := Requests{}
+	reqs := Requester{}
 	req, err := reqs.Request()
 	require.NoError(t, err)
 	require.NotNil(t, req)
 }
 
 func TestRequests_Request_options(t *testing.T) {
-	reqs := Requests{}
+	reqs := Requester{}
 	req, err := reqs.Request(Get("http://test.com/blue"))
 	require.NoError(t, err)
 	assert.Equal(t, "http://test.com/blue", req.URL.String())
@@ -376,7 +376,7 @@ func TestRequests_SendContext(t *testing.T) {
 	require.NotNil(t, resp)
 	assert.Equal(t, 204, resp.StatusCode)
 	assert.Equal(t, "purple", cs.LastClientReq.Context().Value(colorContextKey), "context should be passed through")
-	assert.Equal(t, "", cs.Method, "option arguments should have only affected that request, should not have leaked back into the Requests objects")
+	assert.Equal(t, "", cs.Method, "option arguments should have only affected that request, should not have leaked back into the Requester objects")
 
 	t.Run("Send", func(t *testing.T) {
 		// same as SendContext, just without the context.
@@ -448,7 +448,7 @@ func TestRequests_ReceiveFullContext(t *testing.T) {
 		}
 		for _, c := range cases {
 			t.Run(fmt.Sprintf("succV=%v,failV=%v", c.succV, c.failV), func(t *testing.T) {
-				urlBefore := cs.Requests.URL.String()
+				urlBefore := cs.Requester.URL.String()
 				resp, body, err := cs.ReceiveFullContext(
 					context.Background(),
 					c.succV,
@@ -464,7 +464,7 @@ func TestRequests_ReceiveFullContext(t *testing.T) {
 				if c.failV != nil {
 					assert.Equal(t, &testModel{"red", 30}, c.failV)
 				}
-				assert.Equal(t, urlBefore, cs.Requests.URL.String(), "the Get option should only affect the single request, it should not leak back into the Requests object")
+				assert.Equal(t, urlBefore, cs.Requester.URL.String(), "the Get option should only affect the single request, it should not leak back into the Requester object")
 			})
 		}
 	})

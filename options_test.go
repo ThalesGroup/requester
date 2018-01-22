@@ -1,4 +1,4 @@
-package requests
+package requester
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestRequests_With(t *testing.T) {
+func TestRequester_With(t *testing.T) {
 	reqs, err := New(Method("red"))
 	require.NoError(t, err)
 	reqs2, err := reqs.With(Method("green"))
@@ -28,7 +28,7 @@ func TestRequests_With(t *testing.T) {
 	})
 }
 
-func TestRequests_Apply(t *testing.T) {
+func TestRequester_Apply(t *testing.T) {
 	reqs, err := New(Method("red"))
 	require.NoError(t, err)
 	err = reqs.Apply(Method("green"))
@@ -141,7 +141,7 @@ func TestAddHeader(t *testing.T) {
 	}{
 		{[]Option{AddHeader("authorization", "OAuth key=\"value\"")}, http.Header{"Authorization": {"OAuth key=\"value\""}}},
 		// header keys should be canonicalized
-		{[]Option{AddHeader("content-tYPE", "application/json"), AddHeader("User-AGENT", "requests")}, http.Header{"Content-Type": {"application/json"}, "User-Agent": {"requests"}}},
+		{[]Option{AddHeader("content-tYPE", "application/json"), AddHeader("User-AGENT", "requester")}, http.Header{"Content-Type": {"application/json"}, "User-Agent": {"requester"}}},
 		// values for existing keys should be appended
 		{[]Option{AddHeader("A", "B"), AddHeader("a", "c")}, http.Header{"A": {"B", "c"}}},
 	}

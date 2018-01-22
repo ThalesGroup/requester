@@ -1,9 +1,9 @@
-package requests_test
+package requester_test
 
 import (
 	"bytes"
-	. "github.com/gemalto/requests"
-	"github.com/gemalto/requests/clientserver"
+	. "github.com/gemalto/requester"
+	"github.com/gemalto/requester/clientserver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"

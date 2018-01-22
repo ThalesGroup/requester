@@ -1,49 +1,49 @@
-package requests
+package requester
 
 import (
 	"context"
 	"net/http"
 )
 
-// DefaultRequests is the singleton used by the package-level Request/Send/Receive functions.
-var DefaultRequests = Requests{}
+// DefaultRequester is the singleton used by the package-level Request/Send/Receive functions.
+var DefaultRequester = Requester{}
 
-// Request does the same as Requests.Request(), using the DefaultRequests.
+// Request does the same as Requester.Request(), using the DefaultRequester.
 func Request(opts ...Option) (*http.Request, error) {
-	return DefaultRequests.Request(opts...)
+	return DefaultRequester.Request(opts...)
 }
 
-// RequestContext does the same as Requests.RequestContext(), using the DefaultRequests.
+// RequestContext does the same as Requester.RequestContext(), using the DefaultRequester.
 func RequestContext(ctx context.Context, opts ...Option) (*http.Request, error) {
-	return DefaultRequests.RequestContext(ctx, opts...)
+	return DefaultRequester.RequestContext(ctx, opts...)
 }
 
-// Send does the same as Requests.Send(), using the DefaultRequests.
+// Send does the same as Requester.Send(), using the DefaultRequester.
 func Send(opts ...Option) (*http.Response, error) {
-	return DefaultRequests.Send(opts...)
+	return DefaultRequester.Send(opts...)
 }
 
-// SendContext does the same as Requests.SendContext(), using the DefaultRequests.
+// SendContext does the same as Requester.SendContext(), using the DefaultRequester.
 func SendContext(ctx context.Context, opts ...Option) (*http.Response, error) {
-	return DefaultRequests.SendContext(ctx, opts...)
+	return DefaultRequester.SendContext(ctx, opts...)
 }
 
-// ReceiveContext does the same as Requests.ReceiveContext(), using the DefaultRequests.
+// ReceiveContext does the same as Requester.ReceiveContext(), using the DefaultRequester.
 func ReceiveContext(ctx context.Context, successV interface{}, opts ...Option) (*http.Response, string, error) {
-	return DefaultRequests.ReceiveContext(ctx, successV, opts...)
+	return DefaultRequester.ReceiveContext(ctx, successV, opts...)
 }
 
-// Receive does the same as Requests.Receive(), using the DefaultRequests.
+// Receive does the same as Requester.Receive(), using the DefaultRequester.
 func Receive(successV interface{}, opts ...Option) (*http.Response, string, error) {
-	return DefaultRequests.Receive(successV, opts...)
+	return DefaultRequester.Receive(successV, opts...)
 }
 
-// ReceiveFull does the same as Requests.ReceiveFull(), using the DefaultRequests.
+// ReceiveFull does the same as Requester.ReceiveFull(), using the DefaultRequester.
 func ReceiveFull(successV, failureV interface{}, opts ...Option) (*http.Response, string, error) {
-	return DefaultRequests.ReceiveFull(successV, failureV, opts...)
+	return DefaultRequester.ReceiveFull(successV, failureV, opts...)
 }
 
-// ReceiveFullContext does the same as Requests.ReceiveFullContext(), using the DefaultRequests.
+// ReceiveFullContext does the same as Requester.ReceiveFullContext(), using the DefaultRequester.
 func ReceiveFullContext(ctx context.Context, successV, failureV interface{}, opts ...Option) (*http.Response, string, error) {
-	return DefaultRequests.ReceiveFullContext(ctx, successV, failureV, opts...)
+	return DefaultRequester.ReceiveFullContext(ctx, successV, failureV, opts...)
 }
