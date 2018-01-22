@@ -226,6 +226,19 @@ func TestBearerAuth(t *testing.T) {
 	})
 }
 
+type FakeParams struct {
+	KindName string `url:"kind_name"`
+	Count    int    `url:"count"`
+}
+
+// Url-tagged query struct
+var paramsA = struct {
+	Limit int `url:"limit"`
+}{
+	30,
+}
+var paramsB = FakeParams{KindName: "recent", Count: 25}
+
 func TestQueryParams(t *testing.T) {
 	cases := []struct {
 		options        []Option

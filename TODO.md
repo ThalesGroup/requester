@@ -4,7 +4,10 @@
 RelativeURL("a/", "b/", "c/").  Can't simply append a path sep either.  The args are just
 URLs, which might be fragments or query params
 - Option/Middleware to convert non-2xx responses to an error
-- Middleware for logging
 - Retries
 - Compression
 - Multipart
+- Smarter Dump middleware, which adjusts the output format based in the size
+and type of the body.  For example, limiting the size of the body dumped,
+dumping binary bodies as hex, and maybe auto-indenting xml or json bodies.  Also
+could handle multi parts bodies in a smart way.

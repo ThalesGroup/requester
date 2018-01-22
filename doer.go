@@ -16,23 +16,3 @@ type DoerFunc func(req *http.Request) (*http.Response, error)
 func (f DoerFunc) Do(req *http.Request) (*http.Response, error) {
 	return f(req)
 }
-
-// Middleware can be used to wrap Doers with additional functionality:
-//
-//     loggingMiddleware := func(next Doer) Doer {
-//         return func(req *http.Request) (*http.Response, error) {
-//             logRequest(req)
-//             return next(req)
-//         }
-//     }
-//
-type Middleware func(Doer) Doer
-
-// Wrap applies a set of middleware to a Doer.  The returned Doer will invoke
-// the middleware in the order of the arguments.
-func Wrap(d Doer, m ...Middleware) Doer {
-	for i := len(m) - 1; i > -1; i-- {
-		d = m[i](d)
-	}
-	return d
-}

@@ -1,25 +1,21 @@
-package requests
+package requests_test
 
 import (
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	. "github.com/gemalto/requests"
+	"github.com/gemalto/requests/clientserver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 )
-
-type FakeParams struct {
-	KindName string `url:"kind_name"`
-	Count    int    `url:"count"`
-}
 
 // Url-tagged query struct
 var paramsA = struct {
@@ -361,63 +357,49 @@ func TestRequests_Request_options(t *testing.T) {
 }
 
 func TestRequests_SendContext(t *testing.T) {
-	cl, mux, srv := testServer()
-	defer srv.Close()
-
-	reqs, err := New(URL("http://blue.com/server"))
-	require.NoError(t, err)
-	reqs.Doer = cl
+	cs := clientserver.New(nil)
+	defer cs.Close()
 
 	// SendContext() just creates a request and sends it to the Doer.  That's all we're confirming here
-	mux.HandleFunc("/server", func(w http.ResponseWriter, r *http.Request) {
+	cs.Mux().HandleFunc("/server", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(204)
 	})
 
-	var capturedCtx context.Context
-	resp, err := reqs.SendContext(
+	resp, err := cs.SendContext(
 		context.WithValue(context.Background(), colorContextKey, "purple"),
-		Use(captureRequestContextMiddleware(&capturedCtx)),
+		Post("/server"),
 	)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 
 	// confirm the request went through
 	require.NotNil(t, resp)
 	assert.Equal(t, 204, resp.StatusCode)
-	require.NotNil(t, capturedCtx)
-	assert.Equal(t, "purple", capturedCtx.Value(colorContextKey), "context should be passed through")
-	assert.Empty(t, reqs.Middleware, "option arguments should have only affected that request, should not have leaked back into the Requests objects")
+	assert.Equal(t, "purple", cs.LastClientReq.Context().Value(colorContextKey), "context should be passed through")
+	assert.Equal(t, "", cs.Method, "option arguments should have only affected that request, should not have leaked back into the Requests objects")
 
 	t.Run("Send", func(t *testing.T) {
 		// same as SendContext, just without the context.
-		resp, err := reqs.Send()
+		resp, err := cs.Send(Get("/server"))
 		require.NoError(t, err)
-		assert.Equal(t, 204, resp.StatusCode)
+		defer resp.Body.Close()
 
-		t.Run("options", func(t *testing.T) {
-			reqs := Requests{Doer: cl}
-			resp, err := reqs.Send(Get("http://blue.com/server"))
-			require.NoError(t, err)
-			require.Equal(t, 204, resp.StatusCode)
-		})
+		assert.Equal(t, 204, resp.StatusCode)
 	})
 }
 
 func TestRequests_ReceiveFullContext(t *testing.T) {
-	cl, mux, srv := testServer()
-	defer srv.Close()
 
-	var capturedCtx context.Context
-	reqs, err := New(Get("http://blue.com/model.json"), Client(), Use(captureRequestContextMiddleware(&capturedCtx)))
-	require.NoError(t, err)
-	reqs.Doer = cl
+	cs := clientserver.New(nil, Get("/model.json"))
+	defer cs.Close()
 
-	mux.HandleFunc("/model.json", func(w http.ResponseWriter, r *http.Request) {
+	cs.Mux().HandleFunc("/model.json", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(206)
 		w.Write([]byte(`{"color":"green","count":25}`))
 	})
 
-	mux.HandleFunc("/err", func(w http.ResponseWriter, r *http.Request) {
+	cs.Mux().HandleFunc("/err", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(500)
 		w.Write([]byte(`{"color":"red","count":30}`))
@@ -434,7 +416,9 @@ func TestRequests_ReceiveFullContext(t *testing.T) {
 		}
 		for _, c := range cases {
 			t.Run(fmt.Sprintf("succV=%v,failV=%v", c.succV, c.failV), func(t *testing.T) {
-				resp, body, err := reqs.ReceiveFullContext(
+				cs.Clear()
+
+				resp, body, err := cs.ReceiveFullContext(
 					context.WithValue(context.Background(), colorContextKey, "purple"),
 					c.succV,
 					c.failV,
@@ -442,8 +426,7 @@ func TestRequests_ReceiveFullContext(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, 206, resp.StatusCode)
 				assert.Equal(t, `{"color":"green","count":25}`, body)
-				require.NotNil(t, capturedCtx)
-				assert.Equal(t, "purple", capturedCtx.Value(colorContextKey), "context should be passed through")
+				assert.Equal(t, "purple", cs.LastClientReq.Context().Value(colorContextKey), "context should be passed through")
 				if c.succV != nil {
 					assert.Equal(t, &testModel{"green", 25}, c.succV)
 				}
@@ -465,7 +448,8 @@ func TestRequests_ReceiveFullContext(t *testing.T) {
 		}
 		for _, c := range cases {
 			t.Run(fmt.Sprintf("succV=%v,failV=%v", c.succV, c.failV), func(t *testing.T) {
-				resp, body, err := reqs.ReceiveFullContext(
+				urlBefore := cs.Requests.URL.String()
+				resp, body, err := cs.ReceiveFullContext(
 					context.Background(),
 					c.succV,
 					c.failV,
@@ -480,7 +464,7 @@ func TestRequests_ReceiveFullContext(t *testing.T) {
 				if c.failV != nil {
 					assert.Equal(t, &testModel{"red", 30}, c.failV)
 				}
-				assert.Equal(t, "http://blue.com/model.json", reqs.URL.String(), "the Get option should only affect the single request, it should not leak back into the Requests object")
+				assert.Equal(t, urlBefore, cs.Requests.URL.String(), "the Get option should only affect the single request, it should not leak back into the Requests object")
 			})
 		}
 	})
@@ -488,13 +472,13 @@ func TestRequests_ReceiveFullContext(t *testing.T) {
 	// convenience functions which just wrap ReceiveFullContext
 	t.Run("ReceiveFull", func(t *testing.T) {
 		var mSucc, mFail testModel
-		resp, body, err := reqs.ReceiveFull(&mSucc, mFail)
+		resp, body, err := cs.ReceiveFull(&mSucc, mFail)
 		require.NoError(t, err)
 		assert.Equal(t, 206, resp.StatusCode)
 		assert.Equal(t, `{"color":"green","count":25}`, body)
 		assert.Equal(t, "green", mSucc.Color)
 
-		resp, body, err = reqs.ReceiveFull(&mSucc, &mFail, Get("/err"))
+		resp, body, err = cs.ReceiveFull(&mSucc, &mFail, Get("/err"))
 		require.NoError(t, err)
 		assert.Equal(t, 500, resp.StatusCode)
 		assert.Equal(t, `{"color":"red","count":30}`, body)
@@ -502,47 +486,22 @@ func TestRequests_ReceiveFullContext(t *testing.T) {
 	})
 
 	t.Run("ReceiveContext", func(t *testing.T) {
+		cs.Clear()
 		var m testModel
-		resp, body, err := reqs.ReceiveContext(context.WithValue(context.Background(), colorContextKey, "purple"), &m)
+		resp, body, err := cs.ReceiveContext(context.WithValue(context.Background(), colorContextKey, "purple"), &m)
 		require.NoError(t, err)
 		assert.Equal(t, 206, resp.StatusCode)
 		assert.Equal(t, `{"color":"green","count":25}`, body)
 		assert.Equal(t, "green", m.Color)
-		assert.Equal(t, "purple", capturedCtx.Value(colorContextKey), "context should be passed through")
+		assert.Equal(t, "purple", cs.LastClientReq.Context().Value(colorContextKey), "context should be passed through")
 	})
 
 	t.Run("Receive", func(t *testing.T) {
 		var m testModel
-		resp, body, err := reqs.Receive(&m)
+		resp, body, err := cs.Receive(&m)
 		require.NoError(t, err)
 		assert.Equal(t, 206, resp.StatusCode)
 		assert.Equal(t, `{"color":"green","count":25}`, body)
 		assert.Equal(t, "green", m.Color)
 	})
-}
-
-// Testing Utils
-
-// testServer returns an http Client, ServeMux, and Server. The client proxies
-// requests to the server and handlers can be registered on the mux to handle
-// requests. The caller must close the test server.
-func testServer() (*http.Client, *http.ServeMux, *httptest.Server) {
-	mux := http.NewServeMux()
-	server := httptest.NewServer(mux)
-	transport := &http.Transport{
-		Proxy: func(req *http.Request) (*url.URL, error) {
-			return url.Parse(server.URL)
-		},
-	}
-	client := &http.Client{Transport: transport}
-	return client, mux, server
-}
-
-func captureRequestContextMiddleware(ctxPtr *context.Context) Middleware {
-	return func(next Doer) Doer {
-		return DoerFunc(func(req *http.Request) (*http.Response, error) {
-			*ctxPtr = req.Context()
-			return next.Do(req)
-		})
-	}
 }
