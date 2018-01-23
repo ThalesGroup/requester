@@ -40,7 +40,7 @@ func TestNew(t *testing.T) {
 	require.NotNil(t, reqs)
 }
 
-func TestRequests_Clone(t *testing.T) {
+func TestRequester_Clone(t *testing.T) {
 	cases := [][]Option{
 		{Get(), URL("http: //example.com")},
 		{URL("http://example.com")},
@@ -86,7 +86,7 @@ func TestRequests_Clone(t *testing.T) {
 	}
 }
 
-func TestRequests_Request_URLAndMethod(t *testing.T) {
+func TestRequester_Request_URLAndMethod(t *testing.T) {
 	cases := []struct {
 		options        []Option
 		expectedMethod string
@@ -133,7 +133,7 @@ func TestRequests_Request_URLAndMethod(t *testing.T) {
 
 }
 
-func TestRequests_Request_QueryParams(t *testing.T) {
+func TestRequester_Request_QueryParams(t *testing.T) {
 	cases := []struct {
 		options     []Option
 		expectedURL string
@@ -153,7 +153,7 @@ func TestRequests_Request_QueryParams(t *testing.T) {
 	}
 }
 
-func TestRequests_Request_Body(t *testing.T) {
+func TestRequester_Request_Body(t *testing.T) {
 	cases := []struct {
 		options             []Option
 		expectedBody        string // expected Body io.Reader as a string
@@ -196,7 +196,7 @@ func TestRequests_Request_Body(t *testing.T) {
 	}
 }
 
-func TestRequests_Request_Marshaler(t *testing.T) {
+func TestRequester_Request_Marshaler(t *testing.T) {
 	var capturedV interface{}
 	reqs := Requester{
 		Body: []string{"blue"},
@@ -224,7 +224,7 @@ func TestRequests_Request_Marshaler(t *testing.T) {
 	})
 }
 
-func TestRequests_Request_ContentLength(t *testing.T) {
+func TestRequester_Request_ContentLength(t *testing.T) {
 	reqs, err := New(Body("1234"))
 	require.NoError(t, err)
 	req, err := reqs.RequestContext(context.Background())
@@ -239,7 +239,7 @@ func TestRequests_Request_ContentLength(t *testing.T) {
 	require.EqualValues(t, 10, req.ContentLength)
 }
 
-func TestRequests_Request_GetBody(t *testing.T) {
+func TestRequester_Request_GetBody(t *testing.T) {
 	reqs, err := New(Body("1234"))
 	require.NoError(t, err)
 	req, err := reqs.RequestContext(context.Background())
@@ -264,7 +264,7 @@ func TestRequests_Request_GetBody(t *testing.T) {
 	require.Equal(t, "5678", string(bts))
 }
 
-func TestRequests_Request_Host(t *testing.T) {
+func TestRequester_Request_Host(t *testing.T) {
 	reqs, err := New(URL("http://test.com/red"))
 	require.NoError(t, err)
 	req, err := reqs.RequestContext(context.Background())
@@ -279,7 +279,7 @@ func TestRequests_Request_Host(t *testing.T) {
 	require.Equal(t, "test2.com", req.Host)
 }
 
-func TestRequests_Request_TransferEncoding(t *testing.T) {
+func TestRequester_Request_TransferEncoding(t *testing.T) {
 	reqs := Requester{}
 	req, err := reqs.RequestContext(context.Background())
 	require.NoError(t, err)
@@ -293,7 +293,7 @@ func TestRequests_Request_TransferEncoding(t *testing.T) {
 	require.Equal(t, reqs.TransferEncoding, req.TransferEncoding)
 }
 
-func TestRequests_Request_Close(t *testing.T) {
+func TestRequester_Request_Close(t *testing.T) {
 	reqs := Requester{}
 	req, err := reqs.RequestContext(context.Background())
 	require.NoError(t, err)
@@ -307,7 +307,7 @@ func TestRequests_Request_Close(t *testing.T) {
 	require.True(t, req.Close)
 }
 
-func TestRequests_Request_Trailer(t *testing.T) {
+func TestRequester_Request_Trailer(t *testing.T) {
 	reqs := Requester{}
 	req, err := reqs.RequestContext(context.Background())
 	require.NoError(t, err)
@@ -321,7 +321,7 @@ func TestRequests_Request_Trailer(t *testing.T) {
 	require.Equal(t, reqs.Trailer, req.Trailer)
 }
 
-func TestRequests_Request_Header(t *testing.T) {
+func TestRequester_Request_Header(t *testing.T) {
 	reqs := Requester{}
 	req, err := reqs.RequestContext(context.Background())
 	require.NoError(t, err)
@@ -335,28 +335,28 @@ func TestRequests_Request_Header(t *testing.T) {
 	require.Equal(t, reqs.Header, req.Header)
 }
 
-func TestRequests_Request_Context(t *testing.T) {
+func TestRequester_Request_Context(t *testing.T) {
 	reqs := Requester{}
 	req, err := reqs.RequestContext(context.WithValue(context.Background(), colorContextKey, "red"))
 	require.NoError(t, err)
 	require.Equal(t, "red", req.Context().Value(colorContextKey))
 }
 
-func TestRequests_Request(t *testing.T) {
+func TestRequester_Request(t *testing.T) {
 	reqs := Requester{}
 	req, err := reqs.Request()
 	require.NoError(t, err)
 	require.NotNil(t, req)
 }
 
-func TestRequests_Request_options(t *testing.T) {
+func TestRequester_Request_options(t *testing.T) {
 	reqs := Requester{}
 	req, err := reqs.Request(Get("http://test.com/blue"))
 	require.NoError(t, err)
 	assert.Equal(t, "http://test.com/blue", req.URL.String())
 }
 
-func TestRequests_SendContext(t *testing.T) {
+func TestRequester_SendContext(t *testing.T) {
 	cs := clientserver.New(nil)
 	defer cs.Close()
 
@@ -388,7 +388,7 @@ func TestRequests_SendContext(t *testing.T) {
 	})
 }
 
-func TestRequests_ReceiveFullContext(t *testing.T) {
+func TestRequester_ReceiveFullContext(t *testing.T) {
 
 	cs := clientserver.New(nil, Get("/model.json"))
 	defer cs.Close()
@@ -503,5 +503,43 @@ func TestRequests_ReceiveFullContext(t *testing.T) {
 		assert.Equal(t, 206, resp.StatusCode)
 		assert.Equal(t, `{"color":"green","count":25}`, body)
 		assert.Equal(t, "green", m.Color)
+	})
+
+	t.Run("acceptoptionsforintoargs", func(t *testing.T) {
+
+		var method string
+		cs.Mux().HandleFunc("/blue", func(writer http.ResponseWriter, request *http.Request) {
+			method = request.Method
+			writer.WriteHeader(208)
+		})
+
+		// Receive will Options to be passed as the "into" arguments
+		resp, _, _ := cs.Receive(Get("/blue"))
+		assert.Equal(t, 208, resp.StatusCode)
+
+		ctx := context.Background()
+		resp, _, _ = cs.ReceiveContext(ctx, Get("/blue"))
+		assert.Equal(t, 208, resp.StatusCode)
+
+		resp, _, _ = cs.ReceiveFull(Get("/blue"), nil)
+		assert.Equal(t, 208, resp.StatusCode)
+
+		resp, _, _ = cs.ReceiveFull(nil, Get("/blue"))
+		assert.Equal(t, 208, resp.StatusCode)
+
+		resp, _, _ = cs.ReceiveFull(Get("/blue"), Post())
+		assert.Equal(t, 208, resp.StatusCode)
+		assert.Equal(t, "POST", method)
+
+		resp, _, _ = cs.ReceiveFullContext(ctx, Get("/blue"), nil)
+		assert.Equal(t, 208, resp.StatusCode)
+		assert.Equal(t, "GET", method)
+
+		resp, _, _ = cs.ReceiveFullContext(ctx, nil, Get("/blue"))
+		assert.Equal(t, 208, resp.StatusCode)
+
+		resp, _, _ = cs.ReceiveFullContext(ctx, Get("/blue"), Post())
+		assert.Equal(t, 208, resp.StatusCode)
+		assert.Equal(t, "POST", method)
 	})
 }

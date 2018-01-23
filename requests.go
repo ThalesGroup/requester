@@ -358,13 +358,21 @@ func (r *Requester) Do(req *http.Request) (*http.Response, error) {
 // is returned.
 //
 // If option arguments are passed, they are applied to this single request only.
-func (r *Requester) Receive(successV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
-	return r.ReceiveFullContext(context.Background(), successV, nil, opts...)
+//
+// If the into argument is an Option, then it's treated like an option and not
+// unmarshaled into.
+//
+//     // these are all equivalent
+//     r.Receive(Get())
+//	   r.Receive(nil, Get())
+//
+func (r *Requester) Receive(into interface{}, opts ...Option) (resp *http.Response, body string, err error) {
+	return r.ReceiveFullContext(context.Background(), into, nil, opts...)
 }
 
 // ReceiveContext does the same as Receive, but requires a context.
-func (r *Requester) ReceiveContext(ctx context.Context, successV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
-	return r.ReceiveFullContext(ctx, successV, nil, opts...)
+func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts ...Option) (resp *http.Response, body string, err error) {
+	return r.ReceiveFullContext(ctx, into, nil, opts...)
 }
 
 // ReceiveFull creates a new HTTP request and returns the response. Success
@@ -372,13 +380,31 @@ func (r *Requester) ReceiveContext(ctx context.Context, successV interface{}, op
 // other responses are unmarshaled into failureV.
 // Any error creating the request, sending it, or decoding the response is
 // returned.
+//
+// If the into or intoFailure argument is an Option, then it is treated like an option and not
+// unmarshaled into.
+//
+//     // these are all equivalent
+//     r.ReceiveFull(nil, Get())
+//	   r.ReceiveFull(Get(), nil)
+//     r.ReceiveFull(nil, nil, Get())
+//
 func (r *Requester) ReceiveFull(successV, failureV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
 	return r.ReceiveFullContext(context.Background(), successV, failureV, opts...)
 
 }
 
-// ReceiveFullContext does the same as ReceiveFull
+// ReceiveFullContext does the same as ReceiveFull, but requires a context.
 func (r *Requester) ReceiveFullContext(ctx context.Context, successV, failureV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
+	if opt, ok := successV.(Option); ok {
+		opts = append(opts, opt)
+		successV = nil
+	}
+	if opt, ok := failureV.(Option); ok {
+		opts = append(opts, opt)
+		failureV = nil
+	}
+
 	resp, err = r.SendContext(ctx, opts...)
 	if err != nil {
 		return
