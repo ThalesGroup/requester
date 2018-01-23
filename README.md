@@ -217,11 +217,11 @@ Functional `Options` are defined which set most of these attributes.  You can co
 The HTTP client used to execute requests can also be customized through options:
 
 ```go
-requester.Send(requester.Get("https://api.com"), requester.Client(clients.SkipVerify()))
+requester.Send(requester.Get("https://api.com"), requester.Client(httpclient.SkipVerify()))
 ```
     
-`github.com/gemalto/requester/clients` is a standalone package for constructing and configuring
-`http.Client`s.  The `requester.Client(...clients.Option)` option constructs a new HTTP client
+`github.com/gemalto/requester/httpclient` is a standalone package for constructing and configuring
+`http.Client`s.  The `requester.Client(...httpclient.Option)` option constructs a new HTTP client
 and installs it into `Requester.Doer`.
 
 # Query Params

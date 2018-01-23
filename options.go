@@ -3,7 +3,7 @@ package requester
 import (
 	"encoding/base64"
 	"github.com/ansel1/merry"
-	"github.com/gemalto/requester/clients"
+	"github.com/gemalto/requester/httpclient"
 	goquery "github.com/google/go-querystring/query"
 	"net/http"
 	"net/url"
@@ -363,10 +363,10 @@ func Form() Option {
 }
 
 // Client replaces Requester.Doer with an *http.Client.  The client
-// will be created and configured using the `clients` package.
-func Client(opts ...clients.Option) Option {
+// will be created and configured using the `httpclient` package.
+func Client(opts ...httpclient.Option) Option {
 	return OptionFunc(func(b *Requester) error {
-		c, err := clients.New(opts...)
+		c, err := httpclient.New(opts...)
 		if err != nil {
 			return err
 		}

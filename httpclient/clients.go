@@ -1,4 +1,4 @@
-// Package clients is a set of utilities for creating and
+// Package httpclient is a set of utilities for creating and
 // configuring instances of http.Client.
 //
 // Clients are created with the New() function, which takes a
@@ -8,9 +8,9 @@
 //
 // Example:
 //
-//     c, err := clients.New(clients.SkipVerify(), clients.Timeout(10 * time.Seconds))
+//     c, err := httpclient.New(httpclient.SkipVerify(), httpclient.Timeout(10 * time.Seconds))
 //
-package clients
+package httpclient
 
 import (
 	"crypto/tls"

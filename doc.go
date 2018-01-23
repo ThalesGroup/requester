@@ -27,7 +27,7 @@ The central functions are Request(), Send(), and Receive():
 		requester.JSON(),
 		requester.Non2XXResponseAsError(),
 		requester.BasicAuth("user", "password"),
-		requester.Client(clients.NoRedirects()),
+		requester.Client(httpclient.NoRedirects()),
 		requester.DumpToStandardOut(),
 		requester.Get("http://api.com/users/bob"),
 	)
@@ -37,7 +37,7 @@ The central functions are Request(), Send(), and Receive():
 		requester.JSON(),
 		requester.Non2XXResponseAsError(),
 		requester.BasicAuth("user", "password"),
-		requester.Client(clients.NoRedirects()),
+		requester.Client(httpclient.NoRedirects()),
 		requester.DumpToStandardOut(),
 	)
 
@@ -149,15 +149,15 @@ HTTP Client Options
 
 The HTTP client used to execute requests can also be customized with Options:
 
-	import "github.com/gemalto/requester/clients"
+	import "github.com/gemalto/requester/httpclient"
 
 	requester.Send(
 		requester.Get("https://api.com"),
-		requester.Client(clients.SkipVerify()),
+		requester.Client(httpclient.SkipVerify()),
 	)
 
-"github.com/gemalto/requester/clients" is a standalone package for constructing and configuring
-http.Clients.  The requester.Client(...clients.Option) option constructs a new HTTP client
+"github.com/gemalto/requester/httpclient" is a standalone package for constructing and configuring
+http.Clients.  The requester.Client(...httpclient.Option) option constructs a new HTTP client
 and installs it into Requester.Doer.
 
 Query Params
