@@ -388,7 +388,7 @@ func TestRequester_SendContext(t *testing.T) {
 	})
 }
 
-func TestRequester_ReceiveFullContext(t *testing.T) {
+func TestRequester_ReceiveContext(t *testing.T) {
 
 	cs := clientserver.New(nil, Get("/model.json"))
 	defer cs.Close()
@@ -407,95 +407,45 @@ func TestRequester_ReceiveFullContext(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		cases := []struct {
-			succV, failV interface{}
+			into interface{}
 		}{
-			{&testModel{}, &testModel{}},
-			{&testModel{}, nil},
-			{nil, &testModel{}},
-			{nil, nil},
+			{&testModel{}},
+			{nil},
 		}
 		for _, c := range cases {
-			t.Run(fmt.Sprintf("succV=%v,failV=%v", c.succV, c.failV), func(t *testing.T) {
+			t.Run(fmt.Sprintf("into=%v", c.into), func(t *testing.T) {
 				cs.Clear()
 
-				resp, body, err := cs.ReceiveFullContext(
+				resp, body, err := cs.ReceiveContext(
 					context.WithValue(context.Background(), colorContextKey, "purple"),
-					c.succV,
-					c.failV,
+					c.into,
 				)
 				require.NoError(t, err)
 				assert.Equal(t, 206, resp.StatusCode)
 				assert.Equal(t, `{"color":"green","count":25}`, body)
 				assert.Equal(t, "purple", cs.LastClientReq.Context().Value(colorContextKey), "context should be passed through")
-				if c.succV != nil {
-					assert.Equal(t, &testModel{"green", 25}, c.succV)
-				}
-				if c.failV != nil {
-					assert.Equal(t, &testModel{}, c.failV)
+				if c.into != nil {
+					assert.Equal(t, &testModel{"green", 25}, c.into)
 				}
 			})
 		}
 	})
 
 	t.Run("failure", func(t *testing.T) {
-		cases := []struct {
-			succV, failV interface{}
-		}{
-			{&testModel{}, &testModel{}},
-			{&testModel{}, nil},
-			{nil, &testModel{}},
-			{nil, nil},
-		}
-		for _, c := range cases {
-			t.Run(fmt.Sprintf("succV=%v,failV=%v", c.succV, c.failV), func(t *testing.T) {
-				urlBefore := cs.Requester.URL.String()
-				resp, body, err := cs.ReceiveFullContext(
-					context.Background(),
-					c.succV,
-					c.failV,
-					Get("/err"),
-				)
-				require.NoError(t, err)
-				assert.Equal(t, 500, resp.StatusCode)
-				assert.Equal(t, `{"color":"red","count":30}`, body)
-				if c.succV != nil {
-					assert.Equal(t, &testModel{}, c.succV)
-				}
-				if c.failV != nil {
-					assert.Equal(t, &testModel{"red", 30}, c.failV)
-				}
-				assert.Equal(t, urlBefore, cs.Requester.URL.String(), "the Get option should only affect the single request, it should not leak back into the Requester object")
-			})
-		}
-	})
 
-	// convenience functions which just wrap ReceiveFullContext
-	t.Run("ReceiveFull", func(t *testing.T) {
-		var mSucc, mFail testModel
-		resp, body, err := cs.ReceiveFull(&mSucc, mFail)
-		require.NoError(t, err)
-		assert.Equal(t, 206, resp.StatusCode)
-		assert.Equal(t, `{"color":"green","count":25}`, body)
-		assert.Equal(t, "green", mSucc.Color)
-
-		resp, body, err = cs.ReceiveFull(&mSucc, &mFail, Get("/err"))
+		urlBefore := cs.Requester.URL.String()
+		resp, body, err := cs.ReceiveContext(
+			context.Background(),
+			nil,
+			Get("/err"),
+		)
 		require.NoError(t, err)
 		assert.Equal(t, 500, resp.StatusCode)
 		assert.Equal(t, `{"color":"red","count":30}`, body)
-		assert.Equal(t, "red", mFail.Color)
+		assert.Equal(t, urlBefore, cs.Requester.URL.String(), "the Get option should only affect the single request, it should not leak back into the Requester object")
 	})
 
-	t.Run("ReceiveContext", func(t *testing.T) {
-		cs.Clear()
-		var m testModel
-		resp, body, err := cs.ReceiveContext(context.WithValue(context.Background(), colorContextKey, "purple"), &m)
-		require.NoError(t, err)
-		assert.Equal(t, 206, resp.StatusCode)
-		assert.Equal(t, `{"color":"green","count":25}`, body)
-		assert.Equal(t, "green", m.Color)
-		assert.Equal(t, "purple", cs.LastClientReq.Context().Value(colorContextKey), "context should be passed through")
-	})
-
+	// convenience functions which just wrap ReceiveContext
 	t.Run("Receive", func(t *testing.T) {
 		var m testModel
 		resp, body, err := cs.Receive(&m)
@@ -522,30 +472,8 @@ func TestRequester_ReceiveFullContext(t *testing.T) {
 		assert.Equal(t, 208, resp.StatusCode)
 
 		// variants
-
 		ctx := context.Background()
 		resp, _, _ = cs.ReceiveContext(ctx, Get("/blue"))
 		assert.Equal(t, 208, resp.StatusCode)
-
-		resp, _, _ = cs.ReceiveFull(Get("/blue"), nil)
-		assert.Equal(t, 208, resp.StatusCode)
-
-		resp, _, _ = cs.ReceiveFull(nil, Get("/blue"))
-		assert.Equal(t, 208, resp.StatusCode)
-
-		resp, _, _ = cs.ReceiveFull(Get("/blue"), Post())
-		assert.Equal(t, 208, resp.StatusCode)
-		assert.Equal(t, "POST", method)
-
-		resp, _, _ = cs.ReceiveFullContext(ctx, Get("/blue"), nil)
-		assert.Equal(t, 208, resp.StatusCode)
-		assert.Equal(t, "GET", method)
-
-		resp, _, _ = cs.ReceiveFullContext(ctx, nil, Get("/blue"))
-		assert.Equal(t, 208, resp.StatusCode)
-
-		resp, _, _ = cs.ReceiveFullContext(ctx, Get("/blue"), Post())
-		assert.Equal(t, 208, resp.StatusCode)
-		assert.Equal(t, "POST", method)
 	})
 }

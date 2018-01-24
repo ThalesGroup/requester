@@ -367,46 +367,16 @@ func (r *Requester) Do(req *http.Request) (*http.Response, error) {
 //	   r.Receive(nil, Get())
 //
 func (r *Requester) Receive(into interface{}, opts ...Option) (resp *http.Response, body string, err error) {
-	return r.ReceiveFullContext(context.Background(), into, nil, opts...)
+	return r.ReceiveContext(context.Background(), into, opts...)
 }
 
 // ReceiveContext does the same as Receive, but requires a context.
 func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts ...Option) (resp *http.Response, body string, err error) {
-	return r.ReceiveFullContext(ctx, into, nil, opts...)
-}
-
-// ReceiveFull creates a new HTTP request and returns the response. Success
-// responses (2XX) are unmarshaled into successV and
-// other responses are unmarshaled into failureV.
-// Any error creating the request, sending it, or decoding the response is
-// returned.
-//
-// If the into or intoFailure argument is an Option, then it is treated like an option and not
-// unmarshaled into.
-//
-//     // these are all equivalent
-//     r.ReceiveFull(nil, Get())
-//	   r.ReceiveFull(Get(), nil)
-//     r.ReceiveFull(nil, nil, Get())
-//
-func (r *Requester) ReceiveFull(successV, failureV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
-	return r.ReceiveFullContext(context.Background(), successV, failureV, opts...)
-
-}
-
-// ReceiveFullContext does the same as ReceiveFull, but requires a context.
-func (r *Requester) ReceiveFullContext(ctx context.Context, successV, failureV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
-	if opt, ok := failureV.(Option); ok {
+	if opt, ok := into.(Option); ok {
 		opts = append(opts, nil)
 		copy(opts[1:], opts)
 		opts[0] = opt
-		failureV = nil
-	}
-	if opt, ok := successV.(Option); ok {
-		opts = append(opts, nil)
-		copy(opts[1:], opts)
-		opts[0] = opt
-		successV = nil
+		into = nil
 	}
 
 	resp, err = r.SendContext(ctx, opts...)
@@ -425,20 +395,13 @@ func (r *Requester) ReceiveFullContext(ctx context.Context, successV, failureV i
 	}
 	body = string(bodyS)
 
-	var unmarshalInto interface{}
-	if code := resp.StatusCode; 200 <= code && code <= 299 {
-		unmarshalInto = successV
-	} else {
-		unmarshalInto = failureV
-	}
-
-	if unmarshalInto != nil {
+	if into != nil {
 		unmarshaler := r.Unmarshaler
 		if unmarshaler == nil {
 			unmarshaler = DefaultUnmarshaler
 		}
 
-		err = unmarshaler.Unmarshal(bodyS, resp.Header.Get("Content-Type"), unmarshalInto)
+		err = unmarshaler.Unmarshal(bodyS, resp.Header.Get("Content-Type"), into)
 	}
 	return
 }

@@ -37,13 +37,3 @@ func ReceiveContext(ctx context.Context, successV interface{}, opts ...Option) (
 func Receive(successV interface{}, opts ...Option) (*http.Response, string, error) {
 	return DefaultRequester.Receive(successV, opts...)
 }
-
-// ReceiveFull does the same as Requester.ReceiveFull(), using the DefaultRequester.
-func ReceiveFull(successV, failureV interface{}, opts ...Option) (*http.Response, string, error) {
-	return DefaultRequester.ReceiveFull(successV, failureV, opts...)
-}
-
-// ReceiveFullContext does the same as Requester.ReceiveFullContext(), using the DefaultRequester.
-func ReceiveFullContext(ctx context.Context, successV, failureV interface{}, opts ...Option) (*http.Response, string, error) {
-	return DefaultRequester.ReceiveFullContext(ctx, successV, failureV, opts...)
-}
