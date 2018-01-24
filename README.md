@@ -27,7 +27,7 @@ With `requester`:
 resp, body, err := requester.Receive(nil, requester.Get("http://www.google.com"))
 if err != nil { return err }
 
-fmt.Printf("%d %s", resp.StatusCode, body)
+fmt.Printf("%d %s", resp.StatusCode, string(body))
 ```
     
 For a more complex use case, take an API call, which sends and receives JSON.  
@@ -66,7 +66,7 @@ resp, body, err := requester.Receive(&respStruct,
 )
 if err != nil { return err }
     
-fmt.Printf("%d %s %v", resp.StatusCode, body, respStruct)
+fmt.Printf("%d %s %v", resp.StatusCode, string(body), respStruct)
 ```
     
 Requester revolves around the use of `Option`s, which are arguments to the functions which
@@ -313,7 +313,7 @@ if err != nil { return err }
 fmt.Println(body)     // {"color":"red"}
 ```
     
-The body of the response is returned as a string.  If the first argument is not nil, the body will
+The body of the response is returned.  If the first argument is not nil, the body will
 also be unmarshaled into that value.
 
 By default, the unmarshaler will use the response's `Content-Type` header to determine how to unmarshal

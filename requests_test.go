@@ -422,7 +422,7 @@ func TestRequester_ReceiveContext(t *testing.T) {
 				)
 				require.NoError(t, err)
 				assert.Equal(t, 206, resp.StatusCode)
-				assert.Equal(t, `{"color":"green","count":25}`, body)
+				assert.Equal(t, `{"color":"green","count":25}`, string(body))
 				assert.Equal(t, "purple", cs.LastClientReq.Context().Value(colorContextKey), "context should be passed through")
 				if c.into != nil {
 					assert.Equal(t, &testModel{"green", 25}, c.into)
@@ -441,7 +441,7 @@ func TestRequester_ReceiveContext(t *testing.T) {
 		)
 		require.NoError(t, err)
 		assert.Equal(t, 500, resp.StatusCode)
-		assert.Equal(t, `{"color":"red","count":30}`, body)
+		assert.Equal(t, `{"color":"red","count":30}`, string(body))
 		assert.Equal(t, urlBefore, cs.Requester.URL.String(), "the Get option should only affect the single request, it should not leak back into the Requester object")
 	})
 
@@ -451,7 +451,7 @@ func TestRequester_ReceiveContext(t *testing.T) {
 		resp, body, err := cs.Receive(&m)
 		require.NoError(t, err)
 		assert.Equal(t, 206, resp.StatusCode)
-		assert.Equal(t, `{"color":"green","count":25}`, body)
+		assert.Equal(t, `{"color":"green","count":25}`, string(body))
 		assert.Equal(t, "green", m.Color)
 	})
 

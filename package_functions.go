@@ -29,11 +29,11 @@ func SendContext(ctx context.Context, opts ...Option) (*http.Response, error) {
 }
 
 // ReceiveContext does the same as Requester.ReceiveContext(), using the DefaultRequester.
-func ReceiveContext(ctx context.Context, successV interface{}, opts ...Option) (*http.Response, string, error) {
+func ReceiveContext(ctx context.Context, successV interface{}, opts ...Option) (*http.Response, []byte, error) {
 	return DefaultRequester.ReceiveContext(ctx, successV, opts...)
 }
 
 // Receive does the same as Requester.Receive(), using the DefaultRequester.
-func Receive(successV interface{}, opts ...Option) (*http.Response, string, error) {
+func Receive(successV interface{}, opts ...Option) (*http.Response, []byte, error) {
 	return DefaultRequester.Receive(successV, opts...)
 }

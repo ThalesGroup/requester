@@ -254,7 +254,7 @@ Receive() handles the response as well:
 
 	fmt.Println(body)     // {"color":"red"}
 
-The body of the response is returned as a string.  If the first argument is not nil, the body will
+The body of the response is returned.  If the first argument is not nil, the body will
 also be unmarshaled into that value.
 
 By default, the unmarshaler will use the response's Content-Type header to determine how to unmarshal

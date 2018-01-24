@@ -366,12 +366,12 @@ func (r *Requester) Do(req *http.Request) (*http.Response, error) {
 //     r.Receive(Get())
 //	   r.Receive(nil, Get())
 //
-func (r *Requester) Receive(into interface{}, opts ...Option) (resp *http.Response, body string, err error) {
+func (r *Requester) Receive(into interface{}, opts ...Option) (resp *http.Response, body []byte, err error) {
 	return r.ReceiveContext(context.Background(), into, opts...)
 }
 
 // ReceiveContext does the same as Receive, but requires a context.
-func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts ...Option) (resp *http.Response, body string, err error) {
+func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts ...Option) (resp *http.Response, body []byte, err error) {
 	if opt, ok := into.(Option); ok {
 		opts = append(opts, nil)
 		copy(opts[1:], opts)
@@ -389,11 +389,10 @@ func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts .
 		return
 	}
 
-	bodyS, err := ioutil.ReadAll(resp.Body)
+	body, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return
 	}
-	body = string(bodyS)
 
 	if into != nil {
 		unmarshaler := r.Unmarshaler
@@ -401,7 +400,7 @@ func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts .
 			unmarshaler = DefaultUnmarshaler
 		}
 
-		err = unmarshaler.Unmarshal(bodyS, resp.Header.Get("Content-Type"), into)
+		err = unmarshaler.Unmarshal(body, resp.Header.Get("Content-Type"), into)
 	}
 	return
 }

@@ -86,7 +86,7 @@ func TestReceive(t *testing.T) {
 	resp, body, err := Receive(&m, Get(cs.Server.URL, "red"))
 	require.NoError(t, err)
 
-	assert.Equal(t, `{"count":25}`, body)
+	assert.Equal(t, `{"count":25}`, string(body))
 	assert.Equal(t, 205, resp.StatusCode)
 	assert.Equal(t, 25, m.Count)
 
@@ -101,7 +101,7 @@ func TestReceive(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, `{"count":25}`, body)
+		assert.Equal(t, `{"count":25}`, string(body))
 		assert.Equal(t, 205, resp.StatusCode)
 		assert.Equal(t, 25, m.Count)
 		assert.Equal(t, "yellow", cs.LastClientReq.Context().Value(colorContextKey))

@@ -42,7 +42,7 @@ func TestNon2XXResponseAsError(t *testing.T) {
 	resp, body, err := cs.Receive(nil)
 	require.NoError(t, err)
 	require.Equal(t, 407, resp.StatusCode)
-	require.Equal(t, "boom!", body)
+	require.Equal(t, "boom!", string(body))
 
 	// with the middleware
 	resp, _, err = cs.Receive(nil, Non2XXResponseAsError())
