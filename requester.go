@@ -404,3 +404,27 @@ func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts .
 	}
 	return
 }
+
+// Params returns the QueryParams, initializing them if necessary.  Never returns nil.
+func (r *Requester) Params() url.Values {
+	if r.QueryParams == nil {
+		r.QueryParams = url.Values{}
+	}
+	return r.QueryParams
+}
+
+// Headers returns the Header, initializing it if necessary.  Never returns nil.
+func (r *Requester) Headers() http.Header {
+	if r.Header == nil {
+		r.Header = http.Header{}
+	}
+	return r.Header
+}
+
+// Trailers returns the Trailer, initializing it if necessary.  Never returns nil.
+func (r *Requester) Trailers() http.Header {
+	if r.Trailer == nil {
+		r.Trailer = http.Header{}
+	}
+	return r.Trailer
+}

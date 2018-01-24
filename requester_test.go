@@ -477,3 +477,21 @@ func TestRequester_ReceiveContext(t *testing.T) {
 		assert.Equal(t, 208, resp.StatusCode)
 	})
 }
+
+func TestRequester_Params(t *testing.T) {
+	reqr := &Requester{}
+	reqr.Params().Set("color", "red")
+	assert.Equal(t, "red", reqr.QueryParams.Get("color"))
+}
+
+func TestRequester_Headers(t *testing.T) {
+	reqr := &Requester{}
+	reqr.Headers().Set("color", "red")
+	assert.Equal(t, "red", reqr.Header.Get("color"))
+}
+
+func TestRequester_Trailers(t *testing.T) {
+	reqr := &Requester{}
+	reqr.Trailers().Set("color", "red")
+	assert.Equal(t, "red", reqr.Trailer.Get("color"))
+}
