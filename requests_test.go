@@ -517,6 +517,12 @@ func TestRequester_ReceiveFullContext(t *testing.T) {
 		resp, _, _ := cs.Receive(Get("/blue"))
 		assert.Equal(t, 208, resp.StatusCode)
 
+		// Options should be applied in the order of the arguments
+		resp, _, _ = cs.Receive(Get("/red"), Get("/blue"))
+		assert.Equal(t, 208, resp.StatusCode)
+
+		// variants
+
 		ctx := context.Background()
 		resp, _, _ = cs.ReceiveContext(ctx, Get("/blue"))
 		assert.Equal(t, 208, resp.StatusCode)

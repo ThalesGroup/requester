@@ -396,13 +396,17 @@ func (r *Requester) ReceiveFull(successV, failureV interface{}, opts ...Option) 
 
 // ReceiveFullContext does the same as ReceiveFull, but requires a context.
 func (r *Requester) ReceiveFullContext(ctx context.Context, successV, failureV interface{}, opts ...Option) (resp *http.Response, body string, err error) {
-	if opt, ok := successV.(Option); ok {
-		opts = append(opts, opt)
-		successV = nil
-	}
 	if opt, ok := failureV.(Option); ok {
-		opts = append(opts, opt)
+		opts = append(opts, nil)
+		copy(opts[1:], opts)
+		opts[0] = opt
 		failureV = nil
+	}
+	if opt, ok := successV.(Option); ok {
+		opts = append(opts, nil)
+		copy(opts[1:], opts)
+		opts[0] = opt
+		successV = nil
 	}
 
 	resp, err = r.SendContext(ctx, opts...)
