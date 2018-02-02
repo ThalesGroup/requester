@@ -109,7 +109,7 @@ New Requesters can be constructed with New(...Options):
 	reqs, err := requester.New(
 		requester.Get("http://api.server/resources/1"),
 		requester.JSON(),
-		requester.Accept(requester.ContentTypeJSON)
+		requester.Accept(requester.MediaTypeJSON)
 	)
 
 Additional options can be applied with Apply():
@@ -129,7 +129,7 @@ Requesters can be cloned, creating a copy which can be further configured:
 	base, err := requester.New(
 		requester.URL("https://api.com"),
 		requester.JSON(),
-		requester.Accept(requester.ContentTypeJSON),
+		requester.Accept(requester.MediaTypeJSON),
 		requester.BearerAuth(token),
 	)
 
@@ -204,7 +204,7 @@ be used directly as the request body:
 
 	req, _ := requester.Request(
 		requester.Post("http://api.com"),
-		requester.ContentType(requester.ContentTypeJSON),
+		requester.ContentType(requester.MediaTypeJSON),
 		requester.Body(`{"color":"red"}`),
 	)
 

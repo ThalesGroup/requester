@@ -160,10 +160,10 @@ func TestRequester_Request_Body(t *testing.T) {
 		expectedContentType string
 	}{
 		// Body (json)
-		{[]Option{Body(modelA)}, `{"text":"note","favorite_count":12}`, ContentTypeJSON},
-		{[]Option{Body(&modelA)}, `{"text":"note","favorite_count":12}`, ContentTypeJSON},
-		{[]Option{Body(&FakeModel{})}, `{}`, ContentTypeJSON},
-		{[]Option{Body(FakeModel{})}, `{}`, ContentTypeJSON},
+		{[]Option{Body(modelA)}, `{"text":"note","favorite_count":12}`, MediaTypeJSON},
+		{[]Option{Body(&modelA)}, `{"text":"note","favorite_count":12}`, MediaTypeJSON},
+		{[]Option{Body(&FakeModel{})}, `{}`, MediaTypeJSON},
+		{[]Option{Body(FakeModel{})}, `{}`, MediaTypeJSON},
 		// BodyForm
 		//{[]Option{Body(paramsA)}, "limit=30", formContentType},
 		//{[]Option{Body(paramsB)}, "count=25&kind_name=recent", formContentType},

@@ -76,7 +76,7 @@ func TestReceive(t *testing.T) {
 	defer cs.Close()
 
 	cs.Mux().HandleFunc("/red", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set(HeaderContentType, ContentTypeJSON)
+		w.Header().Set(HeaderContentType, MediaTypeJSON)
 		w.WriteHeader(205)
 		w.Write([]byte(`{"count":25}`))
 

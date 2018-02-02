@@ -15,9 +15,13 @@ const (
 	HeaderContentType   = "Content-Type"
 	HeaderAuthorization = "Authorization"
 
-	ContentTypeJSON = "application/json"
-	ContentTypeXML  = "application/xml"
-	ContentTypeForm = "application/x-www-form-urlencoded"
+	MediaTypeJSON          = "application/json"
+	MediaTypeXML           = "application/xml"
+	MediaTypeForm          = "application/x-www-form-urlencoded"
+	MediaTypeOctetStream   = "application/octet-stream"
+	MediaTypeTextPlain     = "text/plain"
+	MediaTypeMultipart     = "multipart/mixed"
+	MediaTypeMultipartForm = "multipart/form-data"
 )
 
 // Option applies some setting to a Requester object.  Options can be passed
@@ -337,8 +341,8 @@ func joinOpts(opts ...Option) Option {
 func JSON(indent bool) Option {
 	return joinOpts(
 		Marshaler(&JSONMarshaler{Indent: indent}),
-		ContentType(ContentTypeJSON),
-		Accept(ContentTypeJSON),
+		ContentType(MediaTypeJSON),
+		Accept(MediaTypeJSON),
 	)
 }
 
@@ -349,8 +353,8 @@ func JSON(indent bool) Option {
 func XML(indent bool) Option {
 	return joinOpts(
 		Marshaler(&XMLMarshaler{Indent: indent}),
-		ContentType(ContentTypeXML),
-		Accept(ContentTypeXML),
+		ContentType(MediaTypeXML),
+		Accept(MediaTypeXML),
 	)
 }
 
