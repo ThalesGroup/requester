@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ansel1/merry"
 	. "github.com/gemalto/requester"
 	"github.com/gemalto/requester/clientserver"
 	"github.com/stretchr/testify/assert"
@@ -34,10 +35,36 @@ type FakeModel struct {
 
 var modelA = FakeModel{Text: "note", FavoriteCount: 12}
 
+func failOption() OptionFunc {
+	return func(_ *Requester) error {
+		return errors.New("boom")
+	}
+}
+
 func TestNew(t *testing.T) {
-	reqs, err := New()
+	reqs, err := New(URL("green"), Method("POST"))
 	require.NoError(t, err)
 	require.NotNil(t, reqs)
+	// options were applied
+	require.Equal(t, "green", reqs.URL.String())
+	require.Equal(t, "POST", reqs.Method)
+
+	t.Run("error", func(t *testing.T) {
+		_, err := New(failOption())
+		require.EqualError(t, merry.Unwrap(err), "boom")
+	})
+}
+
+func TestMustNew(t *testing.T) {
+	reqs := MustNew(URL("green"), Method("POST"))
+	require.NotNil(t, reqs)
+	// options were applied
+	require.Equal(t, "green", reqs.URL.String())
+	require.Equal(t, "POST", reqs.Method)
+
+	require.Panics(t, func() {
+		MustNew(failOption())
+	})
 }
 
 func TestRequester_Clone(t *testing.T) {

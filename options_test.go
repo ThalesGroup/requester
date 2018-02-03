@@ -43,6 +43,20 @@ func TestRequester_Apply(t *testing.T) {
 	})
 }
 
+func TestRequester_MustApply(t *testing.T) {
+	reqs, err := New(Method("red"))
+	require.NoError(t, err)
+
+	reqs.MustApply(Method("green"))
+	// applies in place
+	require.Equal(t, "green", reqs.Method)
+
+	// panics on error
+	require.Panics(t, func() {
+		reqs.MustApply(URL("cache_object:foo/bar"))
+	})
+}
+
 func TestURL(t *testing.T) {
 	cases := []string{"http://a.io/", "http://b.io", "/relPath", "relPath", ""}
 	for _, base := range cases {

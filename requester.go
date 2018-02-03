@@ -144,7 +144,7 @@ type Requester struct {
 	Unmarshaler BodyUnmarshaler
 }
 
-// New returns a new Requester.
+// New returns a new Requester, applying all options.
 func New(options ...Option) (*Requester, error) {
 	b := &Requester{}
 	err := b.Apply(options...)
@@ -152,6 +152,14 @@ func New(options ...Option) (*Requester, error) {
 		return nil, merry.Wrap(err)
 	}
 	return b, nil
+}
+
+// MustNew creates a new Requester, applying all options.  If
+// an error occurs applying options, this will panic.
+func MustNew(options ...Option) *Requester {
+	b := &Requester{}
+	b.MustApply(options...)
+	return b
 }
 
 func cloneURL(url *url.URL) *url.URL {

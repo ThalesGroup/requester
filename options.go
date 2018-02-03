@@ -64,6 +64,13 @@ func (r *Requester) Apply(opts ...Option) error {
 	return nil
 }
 
+// MustApply applies the options to the receiver.  Panics on errors.
+func (r *Requester) MustApply(opts ...Option) {
+	if err := r.Apply(opts...); err != nil {
+		panic(err)
+	}
+}
+
 // Method sets the HTTP method (e.g. GET/DELETE/etc).
 // If path arguments are passed, they will be applied
 // via the RelativeURL option.
