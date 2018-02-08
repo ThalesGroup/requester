@@ -24,6 +24,9 @@ func New(s *httptest.Server, options ...requester.Option) *ClientServer {
 			Doer: s.Client(),
 		},
 	}
+
+	// insert ourselves in the handler change before the real handler.
+	t.Handler = s.Config.Handler
 	s.Config.Handler = t
 
 	err := t.Apply(requester.URL(s.URL), optionsSlice(options), requester.Use(t.captureClientReqResp))
