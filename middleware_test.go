@@ -29,6 +29,31 @@ func TestDump(t *testing.T) {
 	assert.Contains(t, b.String(), `{"color":"red"}`)
 }
 
+func TestDumpToLog(t *testing.T) {
+	cs := clientserver.New(nil)
+	defer cs.Close()
+
+	cs.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"color":"red"}`))
+	})
+
+	var args []interface{}
+
+	cs.Receive(nil, DumpToLog(func(a ...interface{}) {
+		args = append(args, a...)
+	}))
+
+	assert.Len(t, args, 2)
+
+	reqLog := args[0].(string)
+	respLog := args[1].(string)
+
+	assert.Contains(t, reqLog, "GET / HTTP/1.1")
+	assert.Contains(t, respLog, "HTTP/1.1 200 OK")
+	assert.Contains(t, respLog, `{"color":"red"}`)
+}
+
 func TestNon2XXResponseAsError(t *testing.T) {
 	cs := clientserver.New(nil)
 	defer cs.Close()

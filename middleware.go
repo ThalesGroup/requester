@@ -75,6 +75,24 @@ func DumpToStandardOut() Middleware {
 	return Dump(os.Stdout)
 }
 
+type logFunc func(a ...interface{})
+
+func (f logFunc) Write(p []byte) (n int, err error) {
+	f(string(p))
+	return len(p), nil
+}
+
+// DumpToLog dumps the request and response to a logging function.
+// logf is compatible with fmt.Print(), testing.T.Log, or log.XXX()
+// functions.
+//
+// Request and response will be logged separately.  Though logf
+// takes a variadic arg, it will only be called with one string
+// arg at a time.
+func DumpToLog(logf func(a ...interface{})) Middleware {
+	return Dump(logFunc(logf))
+}
+
 // Non2XXResponseAsError converts error responses from the server into
 // an `error`.  For simple code, this removes the need to check both
 // `err` and `resp.StatusCode`.
