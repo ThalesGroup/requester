@@ -34,13 +34,18 @@ func New(opts ...Option) (*http.Client, error) {
 	// on this in future golang releases
 
 	c := &http.Client{}
+	return c, Apply(c, opts...)
+}
+
+// Apply applies options to an existing function.
+func Apply(c *http.Client, opts ...Option) error {
 	for _, opt := range opts {
 		err := opt.Apply(c)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return c, nil
+	return nil
 }
 
 func newDefaultTransport() *http.Transport {
