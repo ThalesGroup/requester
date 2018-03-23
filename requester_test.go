@@ -484,9 +484,7 @@ func TestRequester_ReceiveContext(t *testing.T) {
 
 	t.Run("acceptoptionsforintoargs", func(t *testing.T) {
 
-		var method string
 		cs.Mux().HandleFunc("/blue", func(writer http.ResponseWriter, request *http.Request) {
-			method = request.Method
 			writer.WriteHeader(208)
 		})
 
