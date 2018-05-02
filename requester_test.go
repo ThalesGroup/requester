@@ -3,6 +3,7 @@ package requester_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/ansel1/merry"
@@ -14,6 +15,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -519,4 +521,107 @@ func TestRequester_Trailers(t *testing.T) {
 	reqr := &Requester{}
 	reqr.Trailers().Set("color", "red")
 	assert.Equal(t, "red", reqr.Trailer.Get("color"))
+}
+
+type TestStruct struct {
+	Color     string
+	Count     int
+	Flavor    string
+	Important bool
+}
+
+func BenchmarkRequester_Receive(b *testing.B) {
+
+	inputJSON := `{"color":"blue","count":10,"flavor":"vanilla","important":true}`
+	h := map[string][]string{"Content-Type": {"application/json"}, "Content-Length": {strconv.Itoa(len([]byte(inputJSON)))}}
+	var mockServer DoerFunc = func(req *http.Request) (*http.Response, error) {
+		resp := &http.Response{
+			StatusCode: 200,
+			Header:     h,
+			Body:       ioutil.NopCloser(strings.NewReader(inputJSON)),
+		}
+		return resp, nil
+	}
+
+	// smoke test
+	var ts TestStruct
+	_, s, err := Receive(&ts, WithDoer(mockServer), JSON(false), Get("/test"))
+
+	require.NoError(b, err)
+	require.JSONEq(b, inputJSON, string(s))
+	require.Equal(b, TestStruct{Color: "blue", Count: 10, Flavor: "vanilla", Important: true}, ts)
+
+	b.Run("simple", func(b *testing.B) {
+		b.Run("requester", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				Receive(&TestStruct{}, WithDoer(mockServer), Get("/test"))
+			}
+		})
+
+		b.Run("base", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				req, _ := http.NewRequest("GET", "/test", nil)
+				resp, _ := mockServer.Do(req)
+				body, _ := ioutil.ReadAll(resp.Body)
+				resp.Body.Close()
+				json.Unmarshal(body, &TestStruct{})
+			}
+		})
+	})
+
+	b.Run("complex", func(b *testing.B) {
+		b.Run("requester", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+
+				Receive(&ts,
+					WithDoer(mockServer),
+					Get("/test/blue/green"),
+					JSON(false),
+					Header("X-Under", "Over"),
+					Header("X-Over", "Under"),
+					QueryParam("color", "blue"),
+					QueryParam("q", "user=sam"),
+					Body(&ts),
+				)
+			}
+		})
+
+		b.Run("requester_attrs", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+
+				r := MustNew(
+					WithDoer(mockServer),
+					Get("/test/blue/green"),
+					JSON(false),
+					QueryParam("color", "blue"),
+					QueryParam("q", "user=sam"),
+					Body(&ts),
+				)
+				r.Header.Add("X-Under", "Over")
+				r.Header.Add("X-Over", "Under")
+				r.Receive(&ts)
+			}
+		})
+
+		b.Run("base", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				reqbody, _ := json.Marshal(&ts)
+
+				qp := url.Values{}
+				qp.Add("color", "blue")
+				qp.Add("q", "user=sam")
+
+				req, _ := http.NewRequest("GET", "/test/blue/green?"+qp.Encode(), bytes.NewReader(reqbody))
+				req.Header.Set("X-Under", "Over")
+				req.Header.Set("X-Over", "Under")
+				req.Header.Set("Content-Type", "application/json")
+				resp, _ := mockServer.Do(req)
+				body, _ := ioutil.ReadAll(resp.Body)
+				resp.Body.Close()
+				json.Unmarshal(body, &TestStruct{})
+			}
+
+		})
+	})
+
 }

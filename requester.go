@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -397,9 +398,29 @@ func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts .
 		return
 	}
 
-	body, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return
+	// check if we have a content length hint.  Pre-sizing
+	// the buffer saves time
+	cls := resp.Header.Get("Content-Length")
+	var cl int64
+
+	if cls != "" {
+		cl, _ = strconv.ParseInt(cls, 10, 0)
+	}
+
+	if cl == 0 {
+		body, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			err = merry.Wrap(err)
+			return
+		}
+	} else {
+		buf := bytes.Buffer{}
+		buf.Grow(int(cl))
+		if _, err = buf.ReadFrom(resp.Body); err != nil {
+			err = merry.Wrap(err)
+			return
+		}
+		body = buf.Bytes()
 	}
 
 	if into != nil {
