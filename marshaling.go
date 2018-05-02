@@ -3,12 +3,24 @@ package requester
 import (
 	"encoding/json"
 	"encoding/xml"
-	"fmt"
 	"github.com/ansel1/merry"
 	goquery "github.com/google/go-querystring/query"
 	"net/url"
 	"strings"
 )
+
+// Requester marshals values into request bodies, and unmarshals
+// response bodies into structs, using instances of the
+// BodyMarshaler and BodyUnmarshaler interfaces.  Implementations of these can
+// be installed in a requester with the Marshaler and Unmarshaler Options.
+//
+// This package comes with a number of implementations built in, which can
+// be installed with the JSON(), XML(), and Form() Options.
+//
+// If not set, requesters fall back on the DefaultMarshaler and
+// DefaultUnmarshaler.  The DefaultMarshaler marshals into JSON, and the
+// DefaultUnmarshaler uses the response's Content-Type header to
+// determine which unmarshaler to delegate it.  It supports JSON and XML.
 
 // DefaultMarshaler is used by Requester if Requester.Marshaler is nil.
 var DefaultMarshaler BodyMarshaler = &JSONMarshaler{}
@@ -57,7 +69,7 @@ type JSONMarshaler struct {
 
 // Unmarshal implements BodyUnmarshaler.
 func (m *JSONMarshaler) Unmarshal(data []byte, contentType string, v interface{}) error {
-	return json.Unmarshal(data, v)
+	return merry.Wrap(json.Unmarshal(data, v))
 }
 
 // Marshal implements BodyMarshaler.
@@ -68,7 +80,7 @@ func (m *JSONMarshaler) Marshal(v interface{}) (data []byte, contentType string,
 		data, err = json.Marshal(v)
 	}
 
-	return data, MediaTypeJSON, err
+	return data, MediaTypeJSON, merry.Wrap(err)
 }
 
 // XMLMarshaler implements BodyMarshaler and BodyUnmarshaler.  It marshals values to
@@ -84,7 +96,7 @@ type XMLMarshaler struct {
 
 // Unmarshal implements BodyUnmarshaler.
 func (*XMLMarshaler) Unmarshal(data []byte, contentType string, v interface{}) error {
-	return xml.Unmarshal(data, v)
+	return merry.Wrap(xml.Unmarshal(data, v))
 }
 
 // Marshal implements BodyMarshaler.
@@ -94,7 +106,7 @@ func (m *XMLMarshaler) Marshal(v interface{}) (data []byte, contentType string, 
 	} else {
 		data, err = xml.Marshal(v)
 	}
-	return data, MediaTypeXML, err
+	return data, MediaTypeXML, merry.Wrap(err)
 }
 
 // FormMarshaler implements BodyMarshaler.  It marshals values into URL-Encoded form data.
@@ -141,5 +153,5 @@ func (m *MultiUnmarshaler) Unmarshal(data []byte, contentType string, v interfac
 	case strings.Contains(contentType, MediaTypeXML):
 		return m.xmlMar.Unmarshal(data, contentType, v)
 	}
-	return fmt.Errorf("unsupported content type: %s", contentType)
+	return merry.Errorf("unsupported content type: %s", contentType)
 }
