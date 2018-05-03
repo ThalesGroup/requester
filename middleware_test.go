@@ -54,7 +54,7 @@ func TestDumpToLog(t *testing.T) {
 	assert.Contains(t, respLog, `{"color":"red"}`)
 }
 
-func TestNon2XXResponseAsError(t *testing.T) {
+func TestExpectCode(t *testing.T) {
 	cs := clientserver.New(nil)
 	defer cs.Close()
 
@@ -63,18 +63,43 @@ func TestNon2XXResponseAsError(t *testing.T) {
 		w.Write([]byte("boom!"))
 	})
 
-	// without the middleware
+	// without middleware
 	resp, body, err := cs.Receive(nil)
 	require.NoError(t, err)
 	require.Equal(t, 407, resp.StatusCode)
 	require.Equal(t, "boom!", string(body))
 
-	// with the middleware
-	resp, _, err = cs.Receive(nil, Non2XXResponseAsError())
-
-	require.Error(t, err)
+	resp, body, err = cs.Receive(ExpectCode(203))
+	// body and response should still be returned
 	assert.Equal(t, 407, resp.StatusCode)
+	assert.Equal(t, "boom!", string(body))
+	// but an error should be returned too
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "expected: 203")
+	assert.Contains(t, err.Error(), "received: 407")
 
-	t.Log(err)
+}
 
+func TestExpectSuccessCode(t *testing.T) {
+	cs := clientserver.New(nil)
+	defer cs.Close()
+
+	cs.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(407)
+		w.Write([]byte("boom!"))
+	})
+
+	// without middleware
+	resp, body, err := cs.Receive(nil)
+	require.NoError(t, err)
+	require.Equal(t, 407, resp.StatusCode)
+	require.Equal(t, "boom!", string(body))
+
+	resp, body, err = cs.Receive(ExpectSuccessCode())
+	// body and response should still be returned
+	assert.Equal(t, 407, resp.StatusCode)
+	assert.Equal(t, "boom!", string(body))
+	// but an error should be returned too
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "code: 407")
 }

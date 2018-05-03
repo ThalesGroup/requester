@@ -61,7 +61,7 @@ There are also *Context() variants as well:
 	requester.SendContext(ctx, requester.Get("http://api.com/users/bob"))
 	requester.ReceiveContext(ctx, &into, requester.Get("http://api.com/users/bob"))
 
-The attributes of Requester{} control how it creates and sends requests, and how it
+The attributes of the Requester control how it creates and sends requests, and how it
 handles responses:
 
 	type Requester struct {
@@ -254,10 +254,13 @@ Receive() handles the response as well:
 
 	fmt.Println(body)     // {"color":"red"}
 
-The body of the response is returned.  If the first argument is not nil, the body will
-also be unmarshaled into that value.
+The body of the response is returned.  Even in cases where an error is returned, the body
+and the response will be returned as well, if available.  This is helpful when middleware
+which validates aspects of the response generates an error, but the calling code still needs
+to inspect the contents of the body (e.g. for an error message).
 
-By default, the unmarshaler will use the response's Content-Type header to determine how to unmarshal
+If the first argument is not nil, the body will also be unmarshaled into that value.  By default, the unmarshaler
+will use the response's Content-Type header to determine how to unmarshal
 the response body into a struct.  This can be customized by setting Requester.Unmarshaler:
 
 	reqs.Unmarshaler = &requester.XMLMarshaler(Indent:true)                  // via assignment

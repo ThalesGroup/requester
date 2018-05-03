@@ -389,38 +389,18 @@ func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts .
 	}
 
 	resp, err = r.SendContext(ctx, opts...)
+
+	// Due to middleware, there are cases where both a response *and* and error
+	// are returned.  We need to make sure we handle the body, if present, even when
+	// an error was returned.
+	body, bodyReadError := readBody(resp)
+
 	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == 204 {
-		return
+		return resp, body, err
 	}
 
-	// check if we have a content length hint.  Pre-sizing
-	// the buffer saves time
-	cls := resp.Header.Get("Content-Length")
-	var cl int64
-
-	if cls != "" {
-		cl, _ = strconv.ParseInt(cls, 10, 0)
-	}
-
-	if cl == 0 {
-		body, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			err = merry.Wrap(err)
-			return
-		}
-	} else {
-		buf := bytes.Buffer{}
-		buf.Grow(int(cl))
-		if _, err = buf.ReadFrom(resp.Body); err != nil {
-			err = merry.Wrap(err)
-			return
-		}
-		body = buf.Bytes()
+	if bodyReadError != nil {
+		return resp, body, bodyReadError
 	}
 
 	if into != nil {
@@ -432,6 +412,37 @@ func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts .
 		err = unmarshaler.Unmarshal(body, resp.Header.Get("Content-Type"), into)
 	}
 	return
+}
+
+func readBody(resp *http.Response) ([]byte, error) {
+
+	if resp == nil || resp.Body == nil {
+		return nil, nil
+	}
+
+	defer resp.Body.Close()
+
+	// check if we have a content length hint.  Pre-sizing
+	// the buffer saves time
+	cls := resp.Header.Get("Content-Length")
+	var cl int64
+
+	if cls != "" {
+		cl, _ = strconv.ParseInt(cls, 10, 0)
+	}
+
+	if cl == 0 {
+		body, err := ioutil.ReadAll(resp.Body)
+		return body, merry.Prepend(err, "reading response body")
+	}
+
+	buf := bytes.Buffer{}
+	buf.Grow(int(cl))
+	if _, err := buf.ReadFrom(resp.Body); err != nil {
+		err = merry.Wrap(err)
+		return nil, merry.Prepend(err, "reading response body")
+	}
+	return buf.Bytes(), nil
 }
 
 // Params returns the QueryParams, initializing them if necessary.  Never returns nil.

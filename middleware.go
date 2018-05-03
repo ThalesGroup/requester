@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
-	"strconv"
 )
 
 // Middleware can be used to wrap Doers with additional functionality:
@@ -93,50 +92,31 @@ func DumpToLog(logf func(a ...interface{})) Middleware {
 	return Dump(logFunc(logf))
 }
 
-// Non2XXResponseAsError converts error responses from the server into
-// an `error`.  For simple code, this removes the need to check both
-// `err` and `resp.StatusCode`.
-//
-// The body of the response is dumped into the error message, for example:
-//
-//     fmt.Println(err)
-//
-// ...might output:
-//
-//     server returned non-2XX status code:
-//     HTTP/1.1 407 Proxy Authentication Required
-//	   Content-Length: 5
-//	   Content-Type: text/plain; charset=utf-8
-//	   Date: Mon, 22 Jan 2018 18:55:18 GMT
-//
-//	   boom!
-//
-// This probably isn't appropriate for production code, where the full response might be
-// sensitive, or too long, or binary, but it should be OK for tests or sample code.
-//
-// For production code, consider using this as an example for your own error handler.
-//
-func Non2XXResponseAsError() Middleware {
+// ExpectCode is middleware which generates an error if the response's status code does not match
+// the expected code.
+func ExpectCode(code int) Middleware {
 	return func(next Doer) Doer {
 		return DoerFunc(func(req *http.Request) (*http.Response, error) {
 			resp, err := next.Do(req)
-			if err == nil && (resp.StatusCode < 200 || resp.StatusCode > 299) {
-				// it's an error.  capture response body as text
-				defer resp.Body.Close()
-
-				d, _ := httputil.DumpResponse(resp, true)
-
-				msg := "server returned non-2XX status code"
-				if len(d) > 0 {
-					msg += ":\n"
-					msg += string(d)
-				} else {
-					msg += ": " + strconv.Itoa(resp.StatusCode)
-				}
-				err := merry.New(msg)
-				err = err.WithHTTPCode(resp.StatusCode)
-				return resp, err
+			if err == nil && resp != nil && resp.StatusCode != code {
+				return resp, merry.Errorf("server returned unexpected status code.  expected: %d, received: %d", code, resp.StatusCode)
 			}
+
+			return resp, err
+		})
+	}
+}
+
+// ExpectSuccessCode is middleware which generates an error if the response's status code is not between 200 and
+// 299.
+func ExpectSuccessCode() Middleware {
+	return func(next Doer) Doer {
+		return DoerFunc(func(req *http.Request) (*http.Response, error) {
+			resp, err := next.Do(req)
+			if err == nil && resp != nil && (resp.StatusCode < 200 || resp.StatusCode > 299) {
+				return resp, merry.Errorf("server returned an unsuccessful status code: %d", resp.StatusCode)
+			}
+
 			return resp, err
 		})
 	}
