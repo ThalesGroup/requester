@@ -417,6 +417,32 @@ func TestRequester_SendContext(t *testing.T) {
 	})
 }
 
+func TestRequester_Receive_withopts(t *testing.T) {
+
+	// ensure that options with modify how the response is handled are applied
+	// correctly
+
+	cs := clientserver.New(nil)
+	defer cs.Close()
+
+	cs.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Write([]byte("blue"))
+	})
+
+	var called bool
+
+	_, _, err := MustNew(
+		Get(cs.Server.URL, "/profile"),
+		UnmarshalFunc(func(data []byte, contentType string, v interface{}) error {
+			called = true
+			return nil
+		}),
+	).Receive(&testModel{})
+	require.NoError(t, err)
+
+	assert.True(t, called)
+}
+
 func TestRequester_ReceiveContext(t *testing.T) {
 
 	cs := clientserver.New(nil, Get("/model.json"))

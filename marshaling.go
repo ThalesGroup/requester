@@ -43,6 +43,13 @@ type BodyUnmarshaler interface {
 // MarshalFunc adapts a function to the BodyMarshaler interface.
 type MarshalFunc func(v interface{}) ([]byte, string, error)
 
+// Apply implements Option.  MarshalFunc can be applied as a requester option, which
+// install itself as the Marshaler.
+func (f MarshalFunc) Apply(r *Requester) error {
+	r.Marshaler = f
+	return nil
+}
+
 // Marshal implements the BodyMarshaler interface.
 func (f MarshalFunc) Marshal(v interface{}) ([]byte, string, error) {
 	return f(v)
@@ -50,6 +57,13 @@ func (f MarshalFunc) Marshal(v interface{}) ([]byte, string, error) {
 
 // UnmarshalFunc adapts a function to the BodyUnmarshaler interface.
 type UnmarshalFunc func(data []byte, contentType string, v interface{}) error
+
+// Apply implements Option.  UnmarshalFunc can be applied as a requester option, which
+// install itself as the Unmarshaler.
+func (f UnmarshalFunc) Apply(r *Requester) error {
+	r.Unmarshaler = f
+	return nil
+}
 
 // Unmarshal implements the BodyUnmarshaler interface.
 func (f UnmarshalFunc) Unmarshal(data []byte, contentType string, v interface{}) error {

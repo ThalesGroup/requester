@@ -234,14 +234,12 @@ func (r *Requester) Request(opts ...Option) (*http.Request, error) {
 //     req, err := r.RequestContext(context.WithTimeout(context.Background(), 10 * time.Seconds))
 //
 func (r *Requester) RequestContext(ctx context.Context, opts ...Option) (*http.Request, error) {
-	reqs := r
-	if len(opts) > 0 {
-		var err error
-		reqs, err = reqs.With(opts...)
-		if err != nil {
-			return nil, err
-		}
+
+	reqs, err := r.withOpts(opts...)
+	if err != nil {
+		return nil, err
 	}
+
 	// marshal body, if applicable
 	bodyData, ct, err := reqs.getRequestBody()
 	if err != nil {
@@ -331,19 +329,25 @@ func (r *Requester) Send(opts ...Option) (*http.Response, error) {
 	return r.SendContext(context.Background(), opts...)
 }
 
+// withOpts is like With(), but skips the clone if there are no options to apply.
+func (r *Requester) withOpts(opts ...Option) (*Requester, error) {
+	if len(opts) > 0 {
+		return r.With(opts...)
+	}
+	return r, nil
+}
+
 // SendContext does the same as Request, but requires a context.
 func (r *Requester) SendContext(ctx context.Context, opts ...Option) (*http.Response, error) {
+
 	// if there are request options, apply them now, rather than passing them
 	// to RequestContext().  Options may modify the Middleware or the Doer, and
 	// we want to honor those options as well as the ones which affect the request.
-	reqs := r
-	if len(opts) > 0 {
-		var err error
-		reqs, err = reqs.With(opts...)
-		if err != nil {
-			return nil, err
-		}
+	reqs, err := r.withOpts(opts...)
+	if err != nil {
+		return nil, err
 	}
+
 	req, err := reqs.RequestContext(ctx)
 	if err != nil {
 		return nil, err
@@ -381,6 +385,8 @@ func (r *Requester) Receive(into interface{}, opts ...Option) (resp *http.Respon
 
 // ReceiveContext does the same as Receive, but requires a context.
 func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts ...Option) (resp *http.Response, body []byte, err error) {
+
+	// if into is really an option, treat it like an option
 	if opt, ok := into.(Option); ok {
 		opts = append(opts, nil)
 		copy(opts[1:], opts)
@@ -388,7 +394,12 @@ func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts .
 		into = nil
 	}
 
-	resp, err = r.SendContext(ctx, opts...)
+	r, err = r.withOpts(opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	resp, err = r.SendContext(ctx)
 
 	// Due to middleware, there are cases where both a response *and* and error
 	// are returned.  We need to make sure we handle the body, if present, even when
