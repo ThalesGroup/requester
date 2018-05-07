@@ -295,16 +295,16 @@ func Body(body interface{}) Option {
 	})
 }
 
-// Marshaler sets Requester.Marshaler
-func Marshaler(m BodyMarshaler) Option {
+// WithMarshaler sets Requester.WithMarshaler
+func WithMarshaler(m Marshaler) Option {
 	return OptionFunc(func(b *Requester) error {
 		b.Marshaler = m
 		return nil
 	})
 }
 
-// Unmarshaler sets Requester.Unmarshaler
-func Unmarshaler(m BodyUnmarshaler) Option {
+// WithUnmarshaler sets Requester.WithUnmarshaler
+func WithUnmarshaler(m Unmarshaler) Option {
 	return OptionFunc(func(b *Requester) error {
 		b.Unmarshaler = m
 		return nil
@@ -347,7 +347,7 @@ func joinOpts(opts ...Option) Option {
 // "application/json" unless explicitly overwritten.
 func JSON(indent bool) Option {
 	return joinOpts(
-		Marshaler(&JSONMarshaler{Indent: indent}),
+		WithMarshaler(&JSONMarshaler{Indent: indent}),
 		ContentType(MediaTypeJSON),
 		Accept(MediaTypeJSON),
 	)
@@ -359,7 +359,7 @@ func JSON(indent bool) Option {
 // "application/xml" unless explicitly overwritten.
 func XML(indent bool) Option {
 	return joinOpts(
-		Marshaler(&XMLMarshaler{Indent: indent}),
+		WithMarshaler(&XMLMarshaler{Indent: indent}),
 		ContentType(MediaTypeXML),
 		Accept(MediaTypeXML),
 	)
@@ -370,7 +370,7 @@ func XML(indent bool) Option {
 // The FormMarshaler will set the Content-Type header to
 // "application/x-www-form-urlencoded" unless explicitly overwritten.
 func Form() Option {
-	return Marshaler(&FormMarshaler{})
+	return WithMarshaler(&FormMarshaler{})
 }
 
 // Client replaces Requester.Doer with an *http.Client.  The client

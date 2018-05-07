@@ -122,7 +122,7 @@ type Requester struct {
 	//
 	// If no Content-Type header has been explicitly set in Requester.Header, the
 	// Marshaler will supply an appropriate one.
-	Marshaler BodyMarshaler
+	Marshaler Marshaler
 
 	//////////////////////////////////////////////////////////////
 	//
@@ -142,7 +142,7 @@ type Requester struct {
 	// Unmarshaler will be used by the Receive methods to unmarshal
 	// the response body.  Defaults to DefaultUnmarshaler, which unmarshals
 	// multiple content types based on the Content-Type response header.
-	Unmarshaler BodyUnmarshaler
+	Unmarshaler Unmarshaler
 }
 
 // New returns a new Requester, applying all options.

@@ -311,14 +311,14 @@ func (*testMarshaler) Marshal(v interface{}) (data []byte, contentType string, e
 
 func TestMarshaler(t *testing.T) {
 	m := &testMarshaler{}
-	reqs, err := New(Marshaler(m))
+	reqs, err := New(WithMarshaler(m))
 	require.NoError(t, err)
 	require.Equal(t, m, reqs.Marshaler)
 }
 
 func TestUnmarshaler(t *testing.T) {
 	m := &testMarshaler{}
-	reqs, err := New(Unmarshaler(m))
+	reqs, err := New(WithUnmarshaler(m))
 	require.NoError(t, err)
 	require.Equal(t, m, reqs.Unmarshaler)
 }

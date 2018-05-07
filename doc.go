@@ -81,14 +81,14 @@ handles responses:
 		// these are handled specially, see below
 		QueryParams url.Values
 		Body interface{}
-		Marshaler BodyMarshaler
+		Marshaler Marshaler
 
 		// these configure how to send requests
 		Doer Doer
 		Middleware []Middleware
 
 		// this configures response handling
-		Unmarshaler BodyUnmarshaler
+		Unmarshaler Unmarshaler
 	}
 
 These attributes can be modified directly, by assignment, or by applying Options.  Options
@@ -264,7 +264,7 @@ will use the response's Content-Type header to determine how to unmarshal
 the response body into a struct.  This can be customized by setting Requester.Unmarshaler:
 
 	reqs.Unmarshaler = &requester.XMLMarshaler(Indent:true)                  // via assignment
-	reqs.Apply(requester.Unmarshaler(&requester.XMLMarshaler(Indent:true)))   // or via an Option
+	reqs.Apply(requester.WithUnmarshaler(&requester.XMLMarshaler(Indent:true)))   // or via an Option
 
 Doer and Middleware
 

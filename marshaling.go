@@ -11,8 +11,8 @@ import (
 
 // Requester marshals values into request bodies, and unmarshals
 // response bodies into structs, using instances of the
-// BodyMarshaler and BodyUnmarshaler interfaces.  Implementations of these can
-// be installed in a requester with the Marshaler and Unmarshaler Options.
+// Marshaler and Unmarshaler interfaces.  Implementations of these can
+// be installed in a requester with the WithMarshaler and WithUnmarshaler Options.
 //
 // This package comes with a number of implementations built in, which can
 // be installed with the JSON(), XML(), and Form() Options.
@@ -23,24 +23,24 @@ import (
 // determine which unmarshaler to delegate it.  It supports JSON and XML.
 
 // DefaultMarshaler is used by Requester if Requester.Marshaler is nil.
-var DefaultMarshaler BodyMarshaler = &JSONMarshaler{}
+var DefaultMarshaler Marshaler = &JSONMarshaler{}
 
 // DefaultUnmarshaler is used by Requester if Requester.Unmarshaler is nil.
-var DefaultUnmarshaler BodyUnmarshaler = &MultiUnmarshaler{}
+var DefaultUnmarshaler Unmarshaler = &MultiUnmarshaler{}
 
-// BodyMarshaler marshals structs into a []byte, and supplies a matching
+// Marshaler marshals structs into a []byte, and supplies a matching
 // Content-Type header.
-type BodyMarshaler interface {
+type Marshaler interface {
 	Marshal(v interface{}) (data []byte, contentType string, err error)
 }
 
-// BodyUnmarshaler unmarshals a []byte response body into a value.  It is provided
+// Unmarshaler unmarshals a []byte response body into a value.  It is provided
 // the value of the Content-Type header from the response.
-type BodyUnmarshaler interface {
+type Unmarshaler interface {
 	Unmarshal(data []byte, contentType string, v interface{}) error
 }
 
-// MarshalFunc adapts a function to the BodyMarshaler interface.
+// MarshalFunc adapts a function to the Marshaler interface.
 type MarshalFunc func(v interface{}) ([]byte, string, error)
 
 // Apply implements Option.  MarshalFunc can be applied as a requester option, which
@@ -50,12 +50,12 @@ func (f MarshalFunc) Apply(r *Requester) error {
 	return nil
 }
 
-// Marshal implements the BodyMarshaler interface.
+// Marshal implements the Marshaler interface.
 func (f MarshalFunc) Marshal(v interface{}) ([]byte, string, error) {
 	return f(v)
 }
 
-// UnmarshalFunc adapts a function to the BodyUnmarshaler interface.
+// UnmarshalFunc adapts a function to the Unmarshaler interface.
 type UnmarshalFunc func(data []byte, contentType string, v interface{}) error
 
 // Apply implements Option.  UnmarshalFunc can be applied as a requester option, which
@@ -65,12 +65,12 @@ func (f UnmarshalFunc) Apply(r *Requester) error {
 	return nil
 }
 
-// Unmarshal implements the BodyUnmarshaler interface.
+// Unmarshal implements the Unmarshaler interface.
 func (f UnmarshalFunc) Unmarshal(data []byte, contentType string, v interface{}) error {
 	return f(data, contentType, v)
 }
 
-// JSONMarshaler implement BodyMarshaler and BodyUnmarshaler.  It marshals values to and
+// JSONMarshaler implement Marshaler and Unmarshaler.  It marshals values to and
 // from JSON.  If Indent is true, marshaled JSON will be indented.
 //
 //   r := requester.Requester{
@@ -81,12 +81,12 @@ type JSONMarshaler struct {
 	Indent bool
 }
 
-// Unmarshal implements BodyUnmarshaler.
+// Unmarshal implements Unmarshaler.
 func (m *JSONMarshaler) Unmarshal(data []byte, contentType string, v interface{}) error {
 	return merry.Wrap(json.Unmarshal(data, v))
 }
 
-// Marshal implements BodyMarshaler.
+// Marshal implements Marshaler.
 func (m *JSONMarshaler) Marshal(v interface{}) (data []byte, contentType string, err error) {
 	if m.Indent {
 		data, err = json.MarshalIndent(v, "", "  ")
@@ -97,7 +97,7 @@ func (m *JSONMarshaler) Marshal(v interface{}) (data []byte, contentType string,
 	return data, MediaTypeJSON, merry.Wrap(err)
 }
 
-// XMLMarshaler implements BodyMarshaler and BodyUnmarshaler.  It marshals values to
+// XMLMarshaler implements Marshaler and Unmarshaler.  It marshals values to
 // and from XML.  If Indent is true, marshaled XML will be indented.
 //
 //     r := requester.Requester{
@@ -108,12 +108,12 @@ type XMLMarshaler struct {
 	Indent bool
 }
 
-// Unmarshal implements BodyUnmarshaler.
+// Unmarshal implements Unmarshaler.
 func (*XMLMarshaler) Unmarshal(data []byte, contentType string, v interface{}) error {
 	return merry.Wrap(xml.Unmarshal(data, v))
 }
 
-// Marshal implements BodyMarshaler.
+// Marshal implements Marshaler.
 func (m *XMLMarshaler) Marshal(v interface{}) (data []byte, contentType string, err error) {
 	if m.Indent {
 		data, err = xml.MarshalIndent(v, "", "  ")
@@ -123,12 +123,12 @@ func (m *XMLMarshaler) Marshal(v interface{}) (data []byte, contentType string, 
 	return data, MediaTypeXML, merry.Wrap(err)
 }
 
-// FormMarshaler implements BodyMarshaler.  It marshals values into URL-Encoded form data.
+// FormMarshaler implements Marshaler.  It marshals values into URL-Encoded form data.
 //
 // The value can be either a map[string][]string, map[string]string, url.Values, or a struct with `url` tags.
 type FormMarshaler struct{}
 
-// Marshal implements BodyMarshaler.
+// Marshal implements Marshaler.
 func (*FormMarshaler) Marshal(v interface{}) (data []byte, contentType string, err error) {
 	switch t := v.(type) {
 	case map[string][]string:
@@ -151,7 +151,7 @@ func (*FormMarshaler) Marshal(v interface{}) (data []byte, contentType string, e
 	}
 }
 
-// MultiUnmarshaler implements BodyUnmarshaler.  It uses the value of the Content-Type header in the
+// MultiUnmarshaler implements Unmarshaler.  It uses the value of the Content-Type header in the
 // response to choose between the JSON and XML unmarshalers.  If Content-Type is something else,
 // an error is returned.
 type MultiUnmarshaler struct {
@@ -159,7 +159,7 @@ type MultiUnmarshaler struct {
 	xmlMar  XMLMarshaler
 }
 
-// Unmarshal implements BodyUnmarshaler.
+// Unmarshal implements Unmarshaler.
 func (m *MultiUnmarshaler) Unmarshal(data []byte, contentType string, v interface{}) error {
 	switch {
 	case strings.Contains(contentType, MediaTypeJSON):
