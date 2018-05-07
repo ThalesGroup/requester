@@ -1,26 +1,25 @@
-package requester_test
+package requester
 
 import (
 	"bytes"
-	. "github.com/gemalto/requester"
-	"github.com/gemalto/requester/clientserver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
 func TestDump(t *testing.T) {
-	cs := clientserver.New(nil)
-	defer cs.Close()
-	cs.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"color":"red"}`))
-	})
+	}))
+	defer ts.Close()
 
 	b := &bytes.Buffer{}
 
-	cs.Receive(nil, Dump(b))
+	Receive(Get(ts.URL), Dump(b))
 
 	t.Log(b)
 
@@ -30,17 +29,24 @@ func TestDump(t *testing.T) {
 }
 
 func TestDumpToLog(t *testing.T) {
-	cs := clientserver.New(nil)
-	defer cs.Close()
 
-	cs.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"color":"red"}`))
-	})
+	}))
+	defer ts.Close()
+
+	//cs := clientserver.New(nil)
+	//defer cs.Close()
+
+	//cs.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	//	w.Header().Set("Content-Type", "application/json")
+	//	w.Write([]byte(`{"color":"red"}`))
+	//})
 
 	var args []interface{}
 
-	cs.Receive(nil, DumpToLog(func(a ...interface{}) {
+	Receive(Get(ts.URL), DumpToLog(func(a ...interface{}) {
 		args = append(args, a...)
 	}))
 
@@ -55,21 +61,28 @@ func TestDumpToLog(t *testing.T) {
 }
 
 func TestExpectCode(t *testing.T) {
-	cs := clientserver.New(nil)
-	defer cs.Close()
 
-	cs.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(407)
 		w.Write([]byte("boom!"))
-	})
+	}))
+	defer ts.Close()
+
+	//cs := clientserver.New(nil)
+	//defer cs.Close()
+
+	//cs.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	//	w.WriteHeader(407)
+	//	w.Write([]byte("boom!"))
+	//})
 
 	// without middleware
-	resp, body, err := cs.Receive(nil)
+	resp, body, err := Receive(Get(ts.URL))
 	require.NoError(t, err)
 	require.Equal(t, 407, resp.StatusCode)
 	require.Equal(t, "boom!", string(body))
 
-	resp, body, err = cs.Receive(ExpectCode(203))
+	resp, body, err = Receive(Get(ts.URL), ExpectCode(203))
 	// body and response should still be returned
 	assert.Equal(t, 407, resp.StatusCode)
 	assert.Equal(t, "boom!", string(body))
@@ -81,21 +94,28 @@ func TestExpectCode(t *testing.T) {
 }
 
 func TestExpectSuccessCode(t *testing.T) {
-	cs := clientserver.New(nil)
-	defer cs.Close()
 
-	cs.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(407)
 		w.Write([]byte("boom!"))
-	})
+	}))
+	defer ts.Close()
+
+	//cs := clientserver.New(nil)
+	//defer cs.Close()
+
+	//cs.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	//	w.WriteHeader(407)
+	//	w.Write([]byte("boom!"))
+	//})
 
 	// without middleware
-	resp, body, err := cs.Receive(nil)
+	resp, body, err := Receive(Get(ts.URL))
 	require.NoError(t, err)
 	require.Equal(t, 407, resp.StatusCode)
 	require.Equal(t, "boom!", string(body))
 
-	resp, body, err = cs.Receive(ExpectSuccessCode())
+	resp, body, err = Receive(Get(ts.URL), ExpectSuccessCode())
 	// body and response should still be returned
 	assert.Equal(t, 407, resp.StatusCode)
 	assert.Equal(t, "boom!", string(body))

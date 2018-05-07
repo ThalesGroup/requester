@@ -1,12 +1,9 @@
-package requester_test
+package requester
 
 import (
 	"context"
-	. "github.com/gemalto/requester"
-	"github.com/gemalto/requester/clientserver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"net/http"
 	"testing"
 )
 
@@ -33,77 +30,63 @@ func TestRequestContext(t *testing.T) {
 }
 
 func TestSend(t *testing.T) {
+	i := Inspector{}
 
-	cs := clientserver.New(nil)
-	defer cs.Close()
-
-	cs.Mux().HandleFunc("/red", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(204)
-	})
-
-	resp, err := Send(Get(cs.Server.URL, "red"))
+	resp, err := Send(Get("/red"), WithDoer(MockDoer(204)), &i)
 	require.NoError(t, err)
 
 	assert.Equal(t, 204, resp.StatusCode)
+	assert.Equal(t, "/red", i.Request.URL.Path)
 }
 
 func TestSendContext(t *testing.T) {
-	cs := clientserver.New(nil)
-	defer cs.Close()
-
-	cs.Mux().HandleFunc("/red", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(204)
-	})
+	i := Inspector{}
 
 	resp, err := SendContext(
 		context.WithValue(context.Background(), colorContextKey, "blue"),
-		Get(cs.Server.URL, "red"),
-		WithDoer(cs),
+		Get("/profile"),
+		WithDoer(MockDoer(204)),
+		&i,
 	)
 
 	require.NoError(t, err)
 	assert.Equal(t, 204, resp.StatusCode)
-	assert.Equal(t, "blue", cs.LastClientReq.Context().Value(colorContextKey))
-}
-
-type testModel struct {
-	Color string `xml:"color" json:"color" url:"color"`
-	Count int    `xml:"count" json:"count" url:"count"`
+	assert.Equal(t, "blue", i.Request.Context().Value(colorContextKey))
+	assert.Equal(t, "/profile", i.Request.URL.Path)
 }
 
 func TestReceive(t *testing.T) {
-	cs := clientserver.New(nil)
-	defer cs.Close()
+	i := Inspector{}
 
-	cs.Mux().HandleFunc("/red", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set(HeaderContentType, MediaTypeJSON)
-		w.WriteHeader(205)
-		w.Write([]byte(`{"count":25}`))
-
-	})
+	doer := MockDoer(205, Body(`{"count":25}`), JSON(false))
 
 	var m testModel
-	resp, body, err := Receive(&m, Get(cs.Server.URL, "red"))
+	resp, body, err := Receive(&m, Get("/red"), WithDoer(doer), &i)
 	require.NoError(t, err)
 
 	assert.Equal(t, `{"count":25}`, string(body))
 	assert.Equal(t, 205, resp.StatusCode)
+	assert.Equal(t, "/red", i.Request.URL.Path)
 	assert.Equal(t, 25, m.Count)
 
 	t.Run("Context", func(t *testing.T) {
 		var m testModel
 
+		i := Inspector{}
+
 		resp, body, err := ReceiveContext(
 			context.WithValue(context.Background(), colorContextKey, "yellow"),
 			&m,
-			Get(cs.Server.URL, "red"),
-			WithDoer(cs),
+			Get("/red"),
+			WithDoer(doer),
+			&i,
 		)
 		require.NoError(t, err)
 
 		assert.Equal(t, `{"count":25}`, string(body))
 		assert.Equal(t, 205, resp.StatusCode)
 		assert.Equal(t, 25, m.Count)
-		assert.Equal(t, "yellow", cs.LastClientReq.Context().Value(colorContextKey))
+		assert.Equal(t, "yellow", i.Request.Context().Value(colorContextKey))
+		assert.Equal(t, "/red", i.Request.URL.Path)
 	})
 }

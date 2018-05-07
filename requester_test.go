@@ -1,4 +1,4 @@
-package requester_test
+package requester
 
 import (
 	"bytes"
@@ -7,26 +7,17 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ansel1/merry"
-	. "github.com/gemalto/requester"
-	"github.com/gemalto/requester/clientserver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strconv"
 	"strings"
 	"testing"
 )
-
-// Url-tagged query struct
-var paramsA = struct {
-	Limit int `url:"limit"`
-}{
-	30,
-}
-var paramsB = FakeParams{KindName: "recent", Count: 25}
 
 // Json-tagged model struct
 type FakeModel struct {
@@ -194,9 +185,9 @@ func TestRequester_Request_Body(t *testing.T) {
 		{[]Option{Body(&FakeModel{})}, `{}`, MediaTypeJSON},
 		{[]Option{Body(FakeModel{})}, `{}`, MediaTypeJSON},
 		// BodyForm
-		//{[]Option{Body(paramsA)}, "limit=30", formContentType},
-		//{[]Option{Body(paramsB)}, "count=25&kind_name=recent", formContentType},
-		//{[]Option{Body(&paramsB)}, "count=25&kind_name=recent", formContentType},
+		{[]Option{Form(), Body(paramsA)}, "limit=30", MediaTypeForm},
+		{[]Option{Form(), Body(paramsB)}, "count=25&kind_name=recent", MediaTypeForm},
+		{[]Option{Form(), Body(&paramsB)}, "count=25&kind_name=recent", MediaTypeForm},
 		// Raw bodies, skips marshaler
 		{[]Option{Body(strings.NewReader("this-is-a-test"))}, "this-is-a-test", ""},
 		{[]Option{Body("this-is-a-test")}, "this-is-a-test", ""},
@@ -386,15 +377,17 @@ func TestRequester_Request_options(t *testing.T) {
 }
 
 func TestRequester_SendContext(t *testing.T) {
-	cs := clientserver.New(nil)
-	defer cs.Close()
 
 	// SendContext() just creates a request and sends it to the Doer.  That's all we're confirming here
-	cs.Mux().HandleFunc("/server", func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(204)
-	})
+	}))
+	defer ts.Close()
 
-	resp, err := cs.SendContext(
+	i := Inspector{}
+	r := MustNew(Get(ts.URL), &i)
+
+	resp, err := r.SendContext(
 		context.WithValue(context.Background(), colorContextKey, "purple"),
 		Post("/server"),
 	)
@@ -404,12 +397,12 @@ func TestRequester_SendContext(t *testing.T) {
 	// confirm the request went through
 	require.NotNil(t, resp)
 	assert.Equal(t, 204, resp.StatusCode)
-	assert.Equal(t, "purple", cs.LastClientReq.Context().Value(colorContextKey), "context should be passed through")
-	assert.Equal(t, "", cs.Method, "option arguments should have only affected that request, should not have leaked back into the Requester objects")
+	assert.Equal(t, "purple", i.Request.Context().Value(colorContextKey), "context should be passed through")
+	assert.Equal(t, "GET", r.Method, "option arguments should have only affected that request, should not have leaked back into the Requester objects")
 
 	t.Run("Send", func(t *testing.T) {
 		// same as SendContext, just without the context.
-		resp, err := cs.Send(Get("/server"))
+		resp, err := r.Send(Get("/server"))
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -422,17 +415,15 @@ func TestRequester_Receive_withopts(t *testing.T) {
 	// ensure that options with modify how the response is handled are applied
 	// correctly
 
-	cs := clientserver.New(nil)
-	defer cs.Close()
-
-	cs.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Write([]byte("blue"))
-	})
+	}))
+	defer ts.Close()
 
 	var called bool
 
 	_, _, err := MustNew(
-		Get(cs.Server.URL, "/profile"),
+		Get(ts.URL, "/profile"),
 		UnmarshalFunc(func(data []byte, contentType string, v interface{}) error {
 			called = true
 			return nil
@@ -445,16 +436,18 @@ func TestRequester_Receive_withopts(t *testing.T) {
 
 func TestRequester_ReceiveContext(t *testing.T) {
 
-	cs := clientserver.New(nil, Get("/model.json"))
-	defer cs.Close()
+	mux := http.NewServeMux()
 
-	cs.Mux().HandleFunc("/model.json", func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	mux.HandleFunc("/model.json", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(206)
 		w.Write([]byte(`{"color":"green","count":25}`))
 	})
 
-	cs.Mux().HandleFunc("/err", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/err", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(500)
 		w.Write([]byte(`{"color":"red","count":30}`))
@@ -469,16 +462,18 @@ func TestRequester_ReceiveContext(t *testing.T) {
 		}
 		for _, c := range cases {
 			t.Run(fmt.Sprintf("into=%v", c.into), func(t *testing.T) {
-				cs.Clear()
+				i := Inspector{}
 
-				resp, body, err := cs.ReceiveContext(
+				resp, body, err := ReceiveContext(
 					context.WithValue(context.Background(), colorContextKey, "purple"),
 					c.into,
+					Get(ts.URL, "/model.json"),
+					&i,
 				)
 				require.NoError(t, err)
 				assert.Equal(t, 206, resp.StatusCode)
 				assert.Equal(t, `{"color":"green","count":25}`, string(body))
-				assert.Equal(t, "purple", cs.LastClientReq.Context().Value(colorContextKey), "context should be passed through")
+				assert.Equal(t, "purple", i.Request.Context().Value(colorContextKey), "context should be passed through")
 				if c.into != nil {
 					assert.Equal(t, &testModel{"green", 25}, c.into)
 				}
@@ -488,22 +483,25 @@ func TestRequester_ReceiveContext(t *testing.T) {
 
 	t.Run("failure", func(t *testing.T) {
 
-		urlBefore := cs.Requester.URL.String()
-		resp, body, err := cs.ReceiveContext(
+		r := MustNew(
+			Get(ts.URL, "/err"),
+		)
+
+		urlBefore := r.URL.String()
+		resp, body, err := r.ReceiveContext(
 			context.Background(),
-			nil,
 			Get("/err"),
 		)
 		require.NoError(t, err)
 		assert.Equal(t, 500, resp.StatusCode)
 		assert.Equal(t, `{"color":"red","count":30}`, string(body))
-		assert.Equal(t, urlBefore, cs.Requester.URL.String(), "the Get option should only affect the single request, it should not leak back into the Requester object")
+		assert.Equal(t, urlBefore, r.URL.String(), "the Get option should only affect the single request, it should not leak back into the Requester object")
 	})
 
 	// convenience functions which just wrap ReceiveContext
 	t.Run("Receive", func(t *testing.T) {
 		var m testModel
-		resp, body, err := cs.Receive(&m)
+		resp, body, err := MustNew(Get(ts.URL, "/model.json")).Receive(&m)
 		require.NoError(t, err)
 		assert.Equal(t, 206, resp.StatusCode)
 		assert.Equal(t, `{"color":"green","count":25}`, string(body))
@@ -512,21 +510,23 @@ func TestRequester_ReceiveContext(t *testing.T) {
 
 	t.Run("acceptoptionsforintoargs", func(t *testing.T) {
 
-		cs.Mux().HandleFunc("/blue", func(writer http.ResponseWriter, request *http.Request) {
+		mux.HandleFunc("/blue", func(writer http.ResponseWriter, request *http.Request) {
 			writer.WriteHeader(208)
 		})
 
+		r := MustNew(Get(ts.URL, "/model.json"))
+
 		// Receive will Options to be passed as the "into" arguments
-		resp, _, _ := cs.Receive(Get("/blue"))
+		resp, _, _ := r.Receive(Get("/blue"))
 		assert.Equal(t, 208, resp.StatusCode)
 
 		// Options should be applied in the order of the arguments
-		resp, _, _ = cs.Receive(Get("/red"), Get("/blue"))
+		resp, _, _ = r.Receive(Get("/red"), Get("/blue"))
 		assert.Equal(t, 208, resp.StatusCode)
 
 		// variants
 		ctx := context.Background()
-		resp, _, _ = cs.ReceiveContext(ctx, Get("/blue"))
+		resp, _, _ = r.ReceiveContext(ctx, Get("/blue"))
 		assert.Equal(t, 208, resp.StatusCode)
 	})
 }
@@ -571,7 +571,7 @@ func BenchmarkRequester_Receive(b *testing.B) {
 
 	// smoke test
 	var ts TestStruct
-	_, s, err := Receive(&ts, WithDoer(mockServer), JSON(false), Get("/test"))
+	_, s, err := Receive(&ts, mockServer, JSON(false), Get("/test"))
 
 	require.NoError(b, err)
 	require.JSONEq(b, inputJSON, string(s))
@@ -580,7 +580,7 @@ func BenchmarkRequester_Receive(b *testing.B) {
 	b.Run("simple", func(b *testing.B) {
 		b.Run("requester", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				Receive(&TestStruct{}, WithDoer(mockServer), Get("/test"))
+				Receive(&TestStruct{}, mockServer, Get("/test"))
 			}
 		})
 
@@ -600,7 +600,7 @@ func BenchmarkRequester_Receive(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 
 				Receive(&ts,
-					WithDoer(mockServer),
+					mockServer,
 					Get("/test/blue/green"),
 					JSON(false),
 					Header("X-Under", "Over"),
@@ -616,7 +616,7 @@ func BenchmarkRequester_Receive(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 
 				r := MustNew(
-					WithDoer(mockServer),
+					mockServer,
 					Get("/test/blue/green"),
 					JSON(false),
 					QueryParam("color", "blue"),
