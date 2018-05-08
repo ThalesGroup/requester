@@ -9,7 +9,8 @@ Notable changes between releases.
 - Breaking change: Marshaler and Unmarshaler options changed names to WithMarshaler and WithUnmarshaler
 ### Removed
 - Non2xxCode has been replaced with ExpectCode and ExpectSuccessCode
-- clientserver package has been replaced with httptestutil
+### Deprecated
+- clientserver package has been deprecated and will be removed.  Replace with httptestutil
 ### Added
 - requester.Inspector: A utility which can be installed in a Requester, which captures the most recent
   outgoing request, request body, incoming response, and response body.
