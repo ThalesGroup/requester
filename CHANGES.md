@@ -19,8 +19,8 @@ Notable changes between releases.
 ### Added
 - requester.Inspector: A utility which can be installed in a Requester, which captures the most recent
   outgoing request, request body, incoming response, and response body.
-- requester "mocks": Added MockDoer(), ChannelDoer(), and MockRequest().  These are convenience methods
-  for writing tests which create mock Doer's and mocked http.Requests.
+- requester "mocks": Added MockRequest(), MockDoer(), ChannelDoer(), MockHandler(), and ChannelHandler().
+  These are convenience methods for writing tests which create http.Requests, mock Doers, and mock http.Handlers.
 - DoerFunc, MiddlewareFunc, MarshalerFunc, and UnmarshalerFunc are now Options: they can passed directly to Requester
   as options, rather than wrapping them in the WithDoer, WithMarshaler, etc.
 - ExpectCode and ExpectSuccessCode options: these convert responses which don't have the required StatusCodes into

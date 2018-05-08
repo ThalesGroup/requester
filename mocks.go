@@ -1,6 +1,9 @@
 package requester
 
-import "net/http"
+import (
+	"io"
+	"net/http"
+)
 
 // These are tools for writing tests.
 
@@ -56,4 +59,47 @@ func MockResponse(statusCode int, options ...Option) *http.Response {
 		Trailer: r.Trailer,
 	}
 	return resp
+}
+
+// MockHandler returns an http.Handler which returns responses built from the args.
+// The Option arguments are used to build an http.Request, then the header and body
+// of the request are copied into an http.Response object.
+func MockHandler(statusCode int, options ...Option) http.Handler {
+
+	r := MustNew(options...)
+
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		req, err := r.RequestContext(request.Context())
+		if err != nil {
+			panic(err)
+		}
+
+		h := writer.Header()
+		for key, value := range req.Header {
+			h[key] = value
+		}
+
+		writer.WriteHeader(statusCode)
+
+		io.Copy(writer, req.Body)
+	})
+}
+
+// ChannelHandler returns an http.Handler and an input channel.  The Handler returns the http.Responses sent to
+// the channel.
+func ChannelHandler() (chan<- *http.Response, http.Handler) {
+	input := make(chan *http.Response, 1)
+
+	return input, http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		resp := <-input
+
+		h := writer.Header()
+		for key, value := range resp.Header {
+			h[key] = value
+		}
+
+		writer.WriteHeader(resp.StatusCode)
+
+		io.Copy(writer, resp.Body)
+	})
 }
