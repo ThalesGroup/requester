@@ -29,6 +29,9 @@ type Inspector struct {
 
 // Clear clears the inspector's fields.
 func (i *Inspector) Clear() {
+	if i == nil {
+		return
+	}
 	i.RequestBody = nil
 	i.ResponseBody = nil
 	i.Request = nil
