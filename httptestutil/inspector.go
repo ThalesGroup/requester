@@ -1,8 +1,9 @@
-package clientserver
+package httptestutil
 
 import (
 	"bytes"
 	"github.com/felixge/httpsnoop"
+	"io"
 	"io/ioutil"
 	"net/http"
 )
@@ -111,6 +112,15 @@ func (b *Inspector) MiddlewareFunc(next http.Handler) http.Handler {
 						ex.Header[key] = value
 					}
 					next(code)
+				}
+			},
+			ReadFrom: func(next httpsnoop.ReadFromFunc) httpsnoop.ReadFromFunc {
+				return func(src io.Reader) (int64, error) {
+					_, err := ex.ResponseBody.ReadFrom(src)
+					if err != nil {
+						return 0, err
+					}
+					return next(bytes.NewReader(ex.ResponseBody.Bytes()))
 				}
 			},
 		})

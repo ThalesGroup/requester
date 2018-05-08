@@ -7,15 +7,9 @@ Notable changes between releases.
 - Breaking change: BodyMarshaler and BodyUnmarshaler interfaces changed names to just Marshaler
   and Unmarshaler
 - Breaking change: Marshaler and Unmarshaler options changed names to WithMarshaler and WithUnmarshaler
-- Breaking change: clientserver package has changed significantly.  Constructor "New" is now replaced
-  with a set of constructors which mirror the httptest package (e.g. `NewServer(http.Handler)`, etc).
-  Also, the Requester is no longer embedded, but is constructed on-demand with `Requester()`.
-  The LastXXX fields, which held information captured from the last request/response exchange has been
-  refactored into a requester.Inspector and a clientserver.Inspector, which are created and installed
-  on-demand with `InspectClient()` and `InspectServer()`
-- Breaking change: clientserver.ClientServer's is no longer an http.Handler
 ### Removed
 - Non2xxCode has been replaced with ExpectCode and ExpectSuccessCode
+- clientserver package has been replaced with httptestutil
 ### Added
 - requester.Inspector: A utility which can be installed in a Requester, which captures the most recent
   outgoing request, request body, incoming response, and response body.
@@ -25,6 +19,8 @@ Notable changes between releases.
   as options, rather than wrapping them in the WithDoer, WithMarshaler, etc.
 - ExpectCode and ExpectSuccessCode options: these convert responses which don't have the required StatusCodes into
   errors.
+- httptestutil package: contains an Inspector utility which intercepts and captures traffic to and from
+  an httptest.Server.
 - More examples.
 ### Fixed
 - Receive() and ReceiveContext() would fail to apply marshaling options correctly.  This is fixed.

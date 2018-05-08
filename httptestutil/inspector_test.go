@@ -1,4 +1,4 @@
-package clientserver
+package httptestutil
 
 import (
 	"fmt"
@@ -14,30 +14,25 @@ import (
 func TestNewInspector(t *testing.T) {
 	i := NewInspector(0)
 
-	cs := NewServer(nil)
-	defer cs.Close()
+	ts := httptest.NewServer(requester.MockHandler(201, requester.Body("pong")))
+	defer ts.Close()
 
-	cs.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		writer.WriteHeader(201)
-		writer.Write([]byte("pong"))
-	})
+	origHandler := ts.Config.Handler
 
-	origHandler := cs.Handler
+	ts.Config.Handler = i.MiddlewareFunc(origHandler)
 
-	cs.Handler = i.MiddlewareFunc(origHandler)
-
-	cs.Requester().Receive(requester.Get("/test"))
-	cs.Requester().Receive(requester.Get("/test"))
+	Requester(ts).Receive(requester.Get("/test"))
+	Requester(ts).Receive(requester.Get("/test"))
 
 	assert.Len(t, i.Exchanges, 2)
 
 	i = NewInspector(5)
 
-	cs.Handler = i.MiddlewareFunc(origHandler)
+	ts.Config.Handler = i.MiddlewareFunc(origHandler)
 
 	// run ten requests
 	for i := 0; i < 10; i++ {
-		cs.Requester().Receive(requester.Get("/test"))
+		Requester(ts).Receive(requester.Get("/test"))
 	}
 
 	// channel should only have buffered 5
@@ -46,17 +41,12 @@ func TestNewInspector(t *testing.T) {
 
 func TestInspector(t *testing.T) {
 
-	cs := NewServer(nil)
-	defer cs.Close()
+	ts := httptest.NewServer(requester.MockHandler(201, requester.Body("pong")))
+	defer ts.Close()
 
-	cs.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		writer.WriteHeader(201)
-		writer.Write([]byte("pong"))
-	})
+	is := Inspect(ts)
 
-	is := cs.InspectServer()
-
-	cs.Requester().Receive(requester.Get("/test"), requester.Body("ping"))
+	Requester(ts).Receive(requester.Get("/test"), requester.Body("ping"))
 
 	ex := is.LastExchange()
 	require.NotNil(t, ex)
@@ -67,21 +57,21 @@ func TestInspector(t *testing.T) {
 }
 
 func TestInspector_NextExchange(t *testing.T) {
-	cs := NewServer(nil)
-	defer cs.Close()
 
 	var count int
-	cs.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+
+	ts := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(201)
 		writer.Write([]byte("pong" + strconv.Itoa(count)))
 		count++
-	})
+	}))
+	defer ts.Close()
 
-	is := cs.InspectServer()
+	is := Inspect(ts)
 
-	cs.Requester().Receive(requester.Get("/test"))
-	cs.Requester().Receive(requester.Get("/test"))
-	cs.Requester().Receive(requester.Get("/test"))
+	Requester(ts).Receive(requester.Get("/test"))
+	Requester(ts).Receive(requester.Get("/test"))
+	Requester(ts).Receive(requester.Get("/test"))
 
 	var exchanges []*Exchange
 
@@ -100,21 +90,21 @@ func TestInspector_NextExchange(t *testing.T) {
 }
 
 func TestInspector_LastExchange(t *testing.T) {
-	cs := NewServer(nil)
-	defer cs.Close()
+	ts := httptest.NewServer(nil)
+	defer ts.Close()
 
 	var count int
-	cs.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	ts.Config.Handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(201)
 		writer.Write([]byte("pong" + strconv.Itoa(count)))
 		count++
 	})
 
-	is := cs.InspectServer()
+	is := Inspect(ts)
 
-	cs.Requester().Receive(requester.Get("/test"))
-	cs.Requester().Receive(requester.Get("/test"))
-	cs.Requester().Receive(requester.Get("/test"))
+	Requester(ts).Receive(requester.Get("/test"))
+	Requester(ts).Receive(requester.Get("/test"))
+	Requester(ts).Receive(requester.Get("/test"))
 
 	ex := is.LastExchange()
 
@@ -125,21 +115,21 @@ func TestInspector_LastExchange(t *testing.T) {
 }
 
 func TestInspector_Clear(t *testing.T) {
-	cs := NewServer(nil)
-	defer cs.Close()
+	ts := httptest.NewServer(nil)
+	defer ts.Close()
 
 	var count int
-	cs.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	ts.Config.Handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(201)
 		writer.Write([]byte("pong" + strconv.Itoa(count)))
 		count++
 	})
 
-	is := cs.InspectServer()
+	is := Inspect(ts)
 
-	cs.Requester().Receive(requester.Get("/test"))
-	cs.Requester().Receive(requester.Get("/test"))
-	cs.Requester().Receive(requester.Get("/test"))
+	Requester(ts).Receive(requester.Get("/test"))
+	Requester(ts).Receive(requester.Get("/test"))
+	Requester(ts).Receive(requester.Get("/test"))
 
 	require.Len(t, is.Exchanges, 3)
 
