@@ -2,6 +2,7 @@ package requester
 
 import (
 	"context"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -355,4 +356,38 @@ func TestForm(t *testing.T) {
 	reqs, err := New(Form())
 	require.NoError(t, err)
 	assert.IsType(t, &FormMarshaler{}, reqs.Marshaler)
+}
+
+func ExampleExpectSuccessCode() {
+
+	resp, body, err := Receive(
+		Get("/profile"),
+		MockDoer(400, Body("bad format")),
+		ExpectSuccessCode(),
+	)
+
+	fmt.Println(resp.StatusCode)
+	fmt.Println(string(body))
+	fmt.Println(err.Error())
+	// Output:
+	// 400
+	// bad format
+	// server returned an unsuccessful status code: 400
+}
+
+func ExampleExpectCode() {
+
+	resp, body, err := Receive(
+		Get("/profile"),
+		MockDoer(400, Body("bad format")),
+		ExpectCode(201),
+	)
+
+	fmt.Println(resp.StatusCode)
+	fmt.Println(string(body))
+	fmt.Println(err.Error())
+	// Output:
+	// 400
+	// bad format
+	// server returned unexpected status code.  expected: 201, received: 400
 }

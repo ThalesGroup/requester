@@ -6,6 +6,15 @@ import (
 	"net/http"
 )
 
+// Inspect installs and returns an Inspector.  The Inspector captures the last
+// request, request body, response and response body.  Useful in tests for inspecting
+// traffic.
+func Inspect(r *Requester) *Inspector {
+	i := Inspector{}
+	r.MustApply(&i)
+	return &i
+}
+
 // Inspector is a Requester Option which captures requests and responses.
 // It's useful for inspecting the contents of exchanges in tests.
 //

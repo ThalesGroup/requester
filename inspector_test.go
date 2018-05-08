@@ -2,6 +2,7 @@ package requester
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -57,4 +58,43 @@ func TestInspector_Clear(t *testing.T) {
 	assert.Nil(t, i.Response)
 	assert.Nil(t, i.RequestBody)
 	assert.Nil(t, i.ResponseBody)
+}
+
+func TestInspect(t *testing.T) {
+
+	r := MustNew()
+
+	i := Inspect(r)
+
+	r.Receive(MockDoer(201))
+
+	assert.NotNil(t, i.Request)
+	assert.Equal(t, 201, i.Response.StatusCode)
+
+}
+
+// Inspect returns an Inspector, which captures the traffic to and from a Requester.  It's
+// a tool for writing tests.
+func ExampleInspect() {
+
+	r := MustNew(
+		MockDoer(201, Body("pong")),
+		Header(HeaderAccept, MediaTypeTextPlain),
+		Body("ping"),
+	)
+
+	i := Inspect(r)
+
+	r.Receive(nil)
+
+	fmt.Println(i.Request.Header.Get(HeaderAccept))
+	fmt.Println(i.RequestBody.String())
+	fmt.Println(i.Response.StatusCode)
+	fmt.Println(i.ResponseBody.String())
+
+	// Output:
+	// text/plain
+	// ping
+	// 201
+	// pong
 }
