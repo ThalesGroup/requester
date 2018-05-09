@@ -2,7 +2,12 @@
 
 Notable changes between releases.
 
-## 0.2.0
+## 0.2.3
+### Fixed
+- Using httptestutil.Inspect() and Dump() with an httptest.Server that has a nil Handler would
+  cause a panic.  
+
+## 0.2.2
 ### Changed
 - Breaking change: BodyMarshaler and BodyUnmarshaler interfaces changed names to just Marshaler
   and Unmarshaler
