@@ -13,6 +13,12 @@ import (
 // DumpTo wraps an http.Handler.  It dumps requests and responses to
 // a writer, using the httputil.DumpRequest and httputil.DumpResponse functions.
 func DumpTo(handler http.Handler, writer io.Writer) http.Handler {
+
+	// use the same default as http.Server
+	if handler == nil {
+		handler = http.DefaultServeMux
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		dump, err := httputil.DumpRequest(r, true)
 		if err != nil {

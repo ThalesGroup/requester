@@ -78,6 +78,12 @@ func (b *Inspector) Clear() {
 // Wrap installs the inspector in an HTTP server by wrapping
 // the server's Handler.
 func (b *Inspector) Wrap(next http.Handler) http.Handler {
+
+	// use the same default as http.Server
+	if next == nil {
+		next = http.DefaultServeMux
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ex := Exchange{}
 		ex.Request = r

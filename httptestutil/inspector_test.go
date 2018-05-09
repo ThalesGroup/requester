@@ -162,6 +162,19 @@ func TestInspector_readFrom(t *testing.T) {
 	assert.Equal(t, "pongkilroy", i.LastExchange().ResponseBody.String())
 }
 
+func TestInspect_nilhandler(t *testing.T) {
+
+	ts := httptest.NewServer(nil)
+	defer ts.Close()
+
+	i := Inspect(ts)
+
+	_, _, err := Requester(ts).Receive(nil)
+	require.NoError(t, err)
+
+	require.NotNil(t, i.LastExchange())
+}
+
 func ExampleInspector_Wrap() {
 	mux := http.NewServeMux()
 	// configure mux...

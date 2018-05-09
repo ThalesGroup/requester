@@ -98,3 +98,18 @@ func TestDump_withInspect(t *testing.T) {
 		})
 	}
 }
+
+func TestDumpTo_nilhandler(t *testing.T) {
+
+	ts := httptest.NewServer(nil)
+	defer ts.Close()
+
+	var buf bytes.Buffer
+
+	ts.Config.Handler = DumpTo(ts.Config.Handler, &buf)
+
+	_, _, err := Requester(ts).Receive(nil)
+	require.NoError(t, err)
+
+	require.NotEmpty(t, buf)
+}
