@@ -46,7 +46,7 @@ func Wrap(d Doer, m ...Middleware) Doer {
 func Dump(w io.Writer) Middleware {
 	return func(next Doer) Doer {
 		return DoerFunc(func(req *http.Request) (*http.Response, error) {
-			dump, dumperr := httputil.DumpRequest(req, true)
+			dump, dumperr := httputil.DumpRequestOut(req, true)
 			// Write the entire request and response out as a single Write() call
 			// So if this is being redirected to a logger, it's all sent in a single
 			// package
@@ -69,8 +69,8 @@ func Dump(w io.Writer) Middleware {
 	}
 }
 
-// DumpToStandardOut dumps requests to os.Stdout.
-func DumpToStandardOut() Middleware {
+// DumpToStout dumps requests to os.Stdout.
+func DumpToStout() Middleware {
 	return Dump(os.Stdout)
 }
 

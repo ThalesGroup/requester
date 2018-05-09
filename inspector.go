@@ -49,11 +49,11 @@ func (i *Inspector) Clear() {
 
 // Apply implements Option
 func (i *Inspector) Apply(r *Requester) error {
-	return r.Apply(Middleware(i.MiddlewareFunc))
+	return r.Apply(Middleware(i.Wrap))
 }
 
-// MiddlewareFunc implements Middleware
-func (i *Inspector) MiddlewareFunc(next Doer) Doer {
+// Wrap implements Middleware
+func (i *Inspector) Wrap(next Doer) Doer {
 	return DoerFunc(func(req *http.Request) (*http.Response, error) {
 		i.Request = req
 		// capture the body

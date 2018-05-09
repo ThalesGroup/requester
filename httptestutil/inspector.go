@@ -75,9 +75,9 @@ func (b *Inspector) Clear() {
 	b.LastExchange()
 }
 
-// MiddlewareFunc installs the inspector in an HTTP server by wrapping
+// Wrap installs the inspector in an HTTP server by wrapping
 // the server's Handler.
-func (b *Inspector) MiddlewareFunc(next http.Handler) http.Handler {
+func (b *Inspector) Wrap(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ex := Exchange{}
 		ex.Request = r
@@ -95,35 +95,7 @@ func (b *Inspector) MiddlewareFunc(next http.Handler) http.Handler {
 			ex.RequestBody = nil
 		}
 
-		ex.ResponseBody = &bytes.Buffer{}
-
-		w = httpsnoop.Wrap(w, httpsnoop.Hooks{
-			Write: func(next httpsnoop.WriteFunc) httpsnoop.WriteFunc {
-				return func(b []byte) (int, error) {
-					ex.ResponseBody.Write(b)
-					return next(b)
-				}
-			},
-			WriteHeader: func(next httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
-				return func(code int) {
-					ex.StatusCode = code
-					ex.Header = make(http.Header, len(w.Header()))
-					for key, value := range w.Header() {
-						ex.Header[key] = value
-					}
-					next(code)
-				}
-			},
-			ReadFrom: func(next httpsnoop.ReadFromFunc) httpsnoop.ReadFromFunc {
-				return func(src io.Reader) (int64, error) {
-					_, err := ex.ResponseBody.ReadFrom(src)
-					if err != nil {
-						return 0, err
-					}
-					return next(bytes.NewReader(ex.ResponseBody.Bytes()))
-				}
-			},
-		})
+		w = httpsnoop.Wrap(w, hooks(&ex))
 
 		next.ServeHTTP(w, r)
 
@@ -133,4 +105,40 @@ func (b *Inspector) MiddlewareFunc(next http.Handler) http.Handler {
 			// don't block if channel is full, just drop
 		}
 	})
+}
+
+func hooks(ex *Exchange) httpsnoop.Hooks {
+	if ex.ResponseBody == nil {
+		ex.ResponseBody = &bytes.Buffer{}
+	}
+	return httpsnoop.Hooks{
+		Write: func(next httpsnoop.WriteFunc) httpsnoop.WriteFunc {
+			return func(b []byte) (int, error) {
+				ex.ResponseBody.Write(b)
+				return next(b)
+			}
+		},
+		Header: func(next httpsnoop.HeaderFunc) httpsnoop.HeaderFunc {
+			return func() http.Header {
+				ex.Header = next()
+				return ex.Header
+			}
+		},
+		WriteHeader: func(next httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
+			return func(code int) {
+				ex.StatusCode = code
+				next(code)
+			}
+		},
+		ReadFrom: func(next httpsnoop.ReadFromFunc) httpsnoop.ReadFromFunc {
+			return func(src io.Reader) (int64, error) {
+				l := ex.ResponseBody.Len()
+				n, err := ex.ResponseBody.ReadFrom(src)
+				if err != nil {
+					return n, err
+				}
+				return next(bytes.NewReader(ex.ResponseBody.Bytes()[l:]))
+			}
+		},
+	}
 }

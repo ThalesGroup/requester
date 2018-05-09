@@ -7,12 +7,13 @@ Notable changes between releases.
 - Breaking change: BodyMarshaler and BodyUnmarshaler interfaces changed names to just Marshaler
   and Unmarshaler
 - Breaking change: Marshaler and Unmarshaler options changed names to WithMarshaler and WithUnmarshaler
+- Breaking change: DumpToStandardOut() is renamed to DumpToStout()
 ### Removed
 - Non2xxCode has been replaced with ExpectCode and ExpectSuccessCode
 ### Deprecated
 - clientserver package has been deprecated and will be removed.  Replace with httptestutil
 ### Added
-- requester.Inspector: A utility which can be installed in a Requester, which captures the most recent
+- Inspect(): A utility which can be installed in a Requester, which captures the most recent
   outgoing request, request body, incoming response, and response body.
 - requester "mocks": Added MockRequest(), MockDoer(), ChannelDoer(), MockHandler(), and ChannelHandler().
   These are convenience methods for writing tests which create http.Requests, mock Doers, and mock http.Handlers.
@@ -22,6 +23,8 @@ Notable changes between releases.
   errors.
 - httptestutil package: contains an Inspector utility which intercepts and captures traffic to and from
   an httptest.Server.
+- httptestutil.Dump(), httptestutil.DumpToLog(), httptestutil.DumpToStdout(): Functions which intercept traffic
+  to and from an httptest.Server, and dump the requests and responses to various outputs.
 - More examples.
 ### Fixed
 - Receive() and ReceiveContext() would fail to apply marshaling options correctly.  This is fixed.

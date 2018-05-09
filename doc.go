@@ -28,7 +28,7 @@ The central functions are Request(), Send(), and Receive():
 		requester.Non2XXResponseAsError(),
 		requester.BasicAuth("user", "password"),
 		requester.Client(httpclient.NoRedirects()),
-		requester.DumpToStandardOut(),
+		requester.DumpToStout(),
 		requester.Get("http://api.com/users/bob"),
 	)
 
@@ -38,7 +38,7 @@ The central functions are Request(), Send(), and Receive():
 		requester.Non2XXResponseAsError(),
 		requester.BasicAuth("user", "password"),
 		requester.Client(httpclient.NoRedirects()),
-		requester.DumpToStandardOut(),
+		requester.DumpToStout(),
 	)
 
 	// Requester instances have the same main methods as the package

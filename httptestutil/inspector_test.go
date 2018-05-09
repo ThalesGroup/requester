@@ -5,9 +5,11 @@ import (
 	"github.com/gemalto/requester"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -19,7 +21,7 @@ func TestNewInspector(t *testing.T) {
 
 	origHandler := ts.Config.Handler
 
-	ts.Config.Handler = i.MiddlewareFunc(origHandler)
+	ts.Config.Handler = i.Wrap(origHandler)
 
 	Requester(ts).Receive(requester.Get("/test"))
 	Requester(ts).Receive(requester.Get("/test"))
@@ -28,7 +30,7 @@ func TestNewInspector(t *testing.T) {
 
 	i = NewInspector(5)
 
-	ts.Config.Handler = i.MiddlewareFunc(origHandler)
+	ts.Config.Handler = i.Wrap(origHandler)
 
 	// run ten requests
 	for i := 0; i < 10; i++ {
@@ -46,7 +48,11 @@ func TestInspector(t *testing.T) {
 
 	is := Inspect(ts)
 
-	Requester(ts).Receive(requester.Get("/test"), requester.Body("ping"))
+	resp, body, err := Requester(ts).Receive(requester.Get("/test"), requester.Body("ping"))
+	require.NoError(t, err)
+
+	assert.Equal(t, 201, resp.StatusCode)
+	assert.Equal(t, "pong", string(body))
 
 	ex := is.LastExchange()
 	require.NotNil(t, ex)
@@ -138,13 +144,31 @@ func TestInspector_Clear(t *testing.T) {
 	require.Empty(t, is.Exchanges)
 }
 
-func ExampleInspector_MiddlewareFunc() {
+func TestInspector_readFrom(t *testing.T) {
+	// fixed a bug in the hook func's ReadFrom hook.
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set(requester.HeaderContentType, requester.MediaTypeJSON)
+		w.WriteHeader(201)
+		readerFrom := w.(io.ReaderFrom)
+		readerFrom.ReadFrom(strings.NewReader("pong"))
+		readerFrom.ReadFrom(strings.NewReader("kilroy"))
+	}))
+	defer ts.Close()
+
+	i := Inspect(ts)
+
+	_, body, _ := Requester(ts).Receive(requester.Get("/test"), requester.Body("ping"))
+	assert.Equal(t, "pongkilroy", string(body))
+	assert.Equal(t, "pongkilroy", i.LastExchange().ResponseBody.String())
+}
+
+func ExampleInspector_Wrap() {
 	mux := http.NewServeMux()
 	// configure mux...
 
 	i := NewInspector(0)
 
-	ts := httptest.NewServer(i.MiddlewareFunc(mux))
+	ts := httptest.NewServer(i.Wrap(mux))
 	defer ts.Close()
 }
 
@@ -155,7 +179,7 @@ func ExampleInspector_NextExchange() {
 		writer.Write([]byte(`pong`))
 	})
 
-	h = i.MiddlewareFunc(h)
+	h = i.Wrap(h)
 
 	ts := httptest.NewServer(h)
 	defer ts.Close()
@@ -180,7 +204,7 @@ func ExampleInspector_LastExchange() {
 		writer.Write([]byte(`pong`))
 	})
 
-	h = i.MiddlewareFunc(h)
+	h = i.Wrap(h)
 
 	ts := httptest.NewServer(h)
 	defer ts.Close()
