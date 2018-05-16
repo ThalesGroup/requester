@@ -4,8 +4,8 @@
 [[projects]]
   name = "github.com/ansel1/merry"
   packages = ["."]
-  revision = "2f92759fd5ad7ea9dc77b73b909b3132b9a5912e"
-  version = "v1.0.1"
+  revision = "c8d518a00eb65f58411f49c1c84ee99c02b699f5"
+  version = "v1.0.2"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -20,10 +20,10 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/go-errors/errors"
   packages = ["."]
-  revision = "3afebba5a48dbc89b574d890b6b34d9ee10b4785"
+  revision = "a6af135bd4e28680facf08a3d206b454abc877a4"
+  version = "v1.0.1"
 
 [[projects]]
   branch = "master"
@@ -43,12 +43,12 @@
     "assert",
     "require"
   ]
-  revision = "69483b4bd14f5845b5a1e55bca19e954e827f1d0"
-  version = "v1.1.4"
+  revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
+  version = "v1.2.1"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4517bf970d0bf69ed3f498d467d541a1cf27fbcb4f82981f45610b7e349278c3"
+  inputs-digest = "17b463711d9d8f6a9bd3ec34abaaac81f26aef1e2d3f7976c54b93c15f330a84"
   solver-name = "gps-cdcl"
   solver-version = 1

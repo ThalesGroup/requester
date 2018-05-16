@@ -29,6 +29,21 @@ func TestRequester_With(t *testing.T) {
 	})
 }
 
+func TestRequester_MustWith(t *testing.T) {
+	reqs := MustNew(Method("red"))
+
+	reqs2 := reqs.MustWith(Method("green"))
+
+	// should clone first, then apply
+	require.Equal(t, "green", reqs2.Method)
+	require.Equal(t, "red", reqs.Method)
+
+	// panics on error
+	require.Panics(t, func() {
+		reqs.MustWith(URL("cache_object:foo/bar"))
+	})
+}
+
 func TestRequester_Apply(t *testing.T) {
 	reqs, err := New(Method("red"))
 	require.NoError(t, err)

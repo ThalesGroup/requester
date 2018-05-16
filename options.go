@@ -53,6 +53,16 @@ func (r *Requester) With(opts ...Option) (*Requester, error) {
 	return r2, nil
 }
 
+// MustWith close the Requester, then applies the options to
+// the clone.  Panics if applying options returns an error
+func (r *Requester) MustWith(opts ...Option) *Requester {
+	if r2, err := r.With(opts...); err != nil {
+		panic(err)
+	} else {
+		return r2
+	}
+}
+
 // Apply applies the options to the receiver.
 func (r *Requester) Apply(opts ...Option) error {
 	for _, o := range opts {

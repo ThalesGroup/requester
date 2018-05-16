@@ -2,10 +2,14 @@
 
 Notable changes between releases.
 
+## 0.2.4
+### Added
+- requester.MustWith(): a version of With() which panics on errors
+
 ## 0.2.3
 ### Fixed
 - Using httptestutil.Inspect() and Dump() with an httptest.Server that has a nil Handler would
-  cause a panic.  
+  cause a panic.
 
 ## 0.2.2
 ### Changed
