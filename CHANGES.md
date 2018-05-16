@@ -4,7 +4,8 @@ Notable changes between releases.
 
 ## 0.2.4
 ### Added
-- requester.MustWith(): a version of With() which panics on errors
+- Requester.MustWith(): a version of With() which panics on errors
+- DumpToStderr()
 
 ## 0.2.3
 ### Fixed

@@ -69,9 +69,14 @@ func Dump(w io.Writer) Middleware {
 	}
 }
 
-// DumpToStout dumps requests to os.Stdout.
+// DumpToStout dumps requests and responses to os.Stdout
 func DumpToStout() Middleware {
 	return Dump(os.Stdout)
+}
+
+// DumpToStderr dumpe requests and responses to os.Stderr
+func DumpToStderr() Middleware {
+	return Dump(os.Stderr)
 }
 
 type logFunc func(a ...interface{})
