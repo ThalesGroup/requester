@@ -36,14 +36,6 @@ func TestDumpToLog(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	//cs := clientserver.New(nil)
-	//defer cs.Close()
-
-	//cs.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-	//	w.Header().Set("Content-Type", "application/json")
-	//	w.Write([]byte(`{"color":"red"}`))
-	//})
-
 	var args []interface{}
 
 	Receive(Get(ts.URL), DumpToLog(func(a ...interface{}) {
@@ -67,14 +59,6 @@ func TestExpectCode(t *testing.T) {
 		w.Write([]byte("boom!"))
 	}))
 	defer ts.Close()
-
-	//cs := clientserver.New(nil)
-	//defer cs.Close()
-
-	//cs.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	//	w.WriteHeader(407)
-	//	w.Write([]byte("boom!"))
-	//})
 
 	// without middleware
 	resp, body, err := Receive(Get(ts.URL))
@@ -100,14 +84,6 @@ func TestExpectSuccessCode(t *testing.T) {
 		w.Write([]byte("boom!"))
 	}))
 	defer ts.Close()
-
-	//cs := clientserver.New(nil)
-	//defer cs.Close()
-
-	//cs.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	//	w.WriteHeader(407)
-	//	w.Write([]byte("boom!"))
-	//})
 
 	// without middleware
 	resp, body, err := Receive(Get(ts.URL))
