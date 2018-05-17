@@ -1,4 +1,4 @@
-# Requester [![Build Status](https://travis-ci.org/gemalto/requester.svg?branch=master)](https://travis-ci.org/gemalto/requester) [![GoDoc](https://godoc.org/github.com/gemalto/requester?status.png)](https://godoc.org/github.com/gemalto/requester) [![Go Report Card](https://goreportcard.com/badge/github.com/gemalto/requester)](https://goreportcard.com/report/github.com/gemalto/requester)
+# Requester[![GoDoc](https://godoc.org/github.com/gemalto/requester?status.png)](https://godoc.org/github.com/gemalto/requester) [![Go Report Card](https://goreportcard.com/badge/github.com/gemalto/requester)](https://goreportcard.com/report/github.com/gemalto/requester)
 
 A.K.A "Yet Another Golang Requests Package"
 
