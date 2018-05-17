@@ -6,6 +6,7 @@ Notable changes between releases.
 ### Added
 - Requester.MustWith(): a version of With() which panics on errors
 - DumpToStderr()
+- Revised docs and more examples
 ### Removed
 - clientserver package.  Use 0.2.x to transition to the httptestutil package
 
