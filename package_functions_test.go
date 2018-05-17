@@ -2,6 +2,7 @@ package requester
 
 import (
 	"context"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -89,4 +90,36 @@ func TestReceive(t *testing.T) {
 		assert.Equal(t, "yellow", i.Request.Context().Value(colorContextKey))
 		assert.Equal(t, "/red", i.Request.URL.Path)
 	})
+}
+
+func ExampleReceive() {
+	resp, body, err := Receive(Get("http://api.com/resource"))
+
+	fmt.Println(resp.StatusCode, string(body), err)
+}
+
+func ExampleReceive_unmarshal() {
+	type Resource struct {
+		Color string `json:"color"`
+	}
+
+	var r Resource
+
+	resp, body, err := Receive(&r, Get("http://api.com/resource"))
+
+	fmt.Println(resp.StatusCode, string(body), err)
+}
+
+func ExampleSend() {
+	resp, err := Send(Get("http://api.com/resource"))
+
+	fmt.Println(resp.StatusCode, err)
+}
+
+func ExampleRequest() {
+	req, err := Request(Get("http://api.com/resource"))
+
+	fmt.Println(req.URL.String(), err)
+
+	// Output: http://api.com/resource <nil>
 }

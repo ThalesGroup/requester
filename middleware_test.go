@@ -2,10 +2,13 @@ package requester
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
 	"testing"
 )
 
@@ -98,4 +101,66 @@ func TestExpectSuccessCode(t *testing.T) {
 	// but an error should be returned too
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "code: 407")
+}
+
+func ExampleMiddleware() {
+	var m Middleware = func(next Doer) Doer {
+		return DoerFunc(func(req *http.Request) (*http.Response, error) {
+			d, _ := httputil.DumpRequest(req, true)
+			fmt.Println(string(d))
+			return next.Do(req)
+		})
+	}
+
+	// Middleware implements Option, so it can be passed directly to functions which accept
+	// options
+	Send(m)
+
+	// ...or applied with the Use option
+	Send(Use(m))
+
+	// ...or applied directly
+	_ = Requester{
+		Middleware: []Middleware{m},
+	}
+
+}
+
+func ExampleDumpToLog() {
+
+	Send(DumpToLog(func(a ...interface{}) {
+		fmt.Println(a...)
+	}))
+
+	// compatible with the log package's functions
+	Send(DumpToLog(log.Println))
+
+	// compatible with the testing package's function
+	var t *testing.T
+	Send(DumpToLog(t.Log))
+
+}
+
+func ExampleExpectSuccessCode() {
+
+	_, _, err := Receive(
+		MockDoer(400),
+		ExpectSuccessCode(),
+	)
+
+	fmt.Println(err.Error())
+
+	// Output: server returned an unsuccessful status code: 400
+}
+
+func ExampleExpectCode() {
+
+	_, _, err := Receive(
+		MockDoer(400),
+		ExpectCode(201),
+	)
+
+	fmt.Println(err.Error())
+
+	// Output: server returned unexpected status code.  expected: 201, received: 400
 }

@@ -21,15 +21,6 @@ import (
 // *http.Request.  A Requester can also be configured by applying
 // functional Options, which simply modify Requester's members.
 //
-// Once configured, you can use Requester solely as a *http.Request
-// factory, by calling Request() or RequestContext().
-//
-// Requester can both construct and send requests (via a configurable Doer)
-// with the Send() and SendContext() methods.
-//
-// Finally, Requester can construct and send requests, and handle the responses
-// with Receive() and ReceiveContext().
-//
 // A Requester can be constructed as a literal:
 //
 //     r := requester.Requester{
@@ -38,38 +29,38 @@ import (
 //              Body:   b,
 //          }
 //
-// ...or via the New() constructor, which takes functional Options:
+// ...or via the New() and MustNew() constructors, which take Options:
 //
 //     reqs, err := requester.New(requester.Post("http://test.com/red"), requester.Body(b))
 //
-// Additional options can be applied with Apply():
+// Additional options can be applied with Apply() and MustApply():
 //
 //     err := reqs.Apply(requester.Accept("application/json"))
 //
-// Requester can be cloned.  The clone can
+// Requesters can be cloned.  The clone can
 // then be further configured without affecting the parent:
 //
 //     reqs2 := reqs.Clone()
 //     err := reqs2.Apply(Header("X-Frame","1"))
 //
-// With() is equivalent to Clone() and Apply():
+// With()/MustWith() is equivalent to Clone() and Apply()/MustApply():
 //
 //     reqs2, err := reqs.With(requester.Header("X-Frame","1"))
 //
 // The remaining methods of Requester are for creating HTTP requests, sending them, and handling
 // the responses: Request(), Send(), and Receive().
 //
-//     req, err        := reqs.Request()           // create a requests
-//     resp, err       := reqs.Send()                // create and send a request
+//     req, err := reqs.Request()          // create a requests
+//     resp, err := reqs.Send()            // create and send a request
 //
 //     var m Resource
-//     resp, body, err := reqs.Receive(&m)         // create and send request, read and unmarshal response
+//     resp, body, err := reqs.Receive(&m) // create and send request, read and unmarshal response
 //
 // Request(), Send(), and Receive() all accept a varargs of Options, which will be applied
 // only to a single request, not to the Requester.
 //
-//     req, err 	   := reqs.Request(
-//                        	requester.Put("users/bob"),
+//     req, err := reqs.Request(
+//                          requester.Put("users/bob"),
 //                          requester.Body(bob),
 //                        )
 //
@@ -193,17 +184,7 @@ func cloneHeader(h http.Header) http.Header {
 	return h2
 }
 
-// Clone returns a deep copy of a Requester.  Useful inheriting and adding settings from
-// a parent Requester without modifying the parent.  For example,
-//
-//     parent, _ := requester.New(Get("https://api.io/"))
-//     foo := parent.Clone()
-//     foo.Apply(Get("foo/"))
-// 	   bar := parent.Clone()
-//     bar.Apply(Post("bar/"))
-//
-// foo and bar will both use the same client, but send requests to
-// https://api.io/foo/ and https://api.io/bar/ respectively.
+// Clone returns a deep copy of a Requester.
 func (r *Requester) Clone() *Requester {
 	s2 := *r
 	s2.Header = cloneHeader(r.Header)
@@ -285,10 +266,17 @@ func (r *Requester) RequestContext(ctx context.Context, opts ...Option) (*http.R
 
 	if len(reqs.QueryParams) > 0 {
 		if req.URL.RawQuery != "" {
-			req.URL.RawQuery += "&" + reqs.QueryParams.Encode()
+			existingValues := req.URL.Query()
+			for key, value := range reqs.QueryParams {
+				for _, v := range value {
+					existingValues.Add(key, v)
+				}
+			}
+			req.URL.RawQuery = existingValues.Encode()
 		} else {
 			req.URL.RawQuery = reqs.QueryParams.Encode()
 		}
+
 	}
 
 	return req.WithContext(ctx), nil
@@ -365,25 +353,22 @@ func (r *Requester) Do(req *http.Request) (*http.Response, error) {
 	return Wrap(doer, r.Middleware...).Do(req)
 }
 
-// Receive creates a new HTTP request and returns the response. Success
-// responses (2XX) are unmarshaled into successV.
+// Receive creates a new HTTP request and returns the response.
 // Any error creating the request, sending it, or decoding a 2XX response
 // is returned.
 //
+// The second argument may be nil, an Option, or a value to unmarshal the
+// response body into.
+//
 // If option arguments are passed, they are applied to this single request only.
-//
-// If the into argument is an Option, then it's treated like an option and not
-// unmarshaled into.
-//
-//     // these are all equivalent
-//     r.Receive(Get())
-//	   r.Receive(nil, Get())
-//
 func (r *Requester) Receive(into interface{}, opts ...Option) (resp *http.Response, body []byte, err error) {
 	return r.ReceiveContext(context.Background(), into, opts...)
 }
 
 // ReceiveContext does the same as Receive, but requires a context.
+//
+// The second argument may be nil, an Option, or a value to unmarshal the
+// response body into.
 func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts ...Option) (resp *http.Response, body []byte, err error) {
 
 	// if into is really an option, treat it like an option

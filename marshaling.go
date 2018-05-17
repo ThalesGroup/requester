@@ -28,8 +28,16 @@ var DefaultMarshaler Marshaler = &JSONMarshaler{}
 // DefaultUnmarshaler is used by Requester if Requester.Unmarshaler is nil.
 var DefaultUnmarshaler Unmarshaler = &MultiUnmarshaler{}
 
-// Marshaler marshals structs into a []byte, and supplies a matching
-// Content-Type header.
+const (
+	contentTypeForm = MediaTypeForm + "; charset=UTF-8"
+	contentTypeXML  = MediaTypeXML + "; charset=UTF-8"
+	contentTypeJSON = MediaTypeJSON + "; charset=UTF-8"
+)
+
+// Marshaler marshals values into a []byte.
+//
+// If the content type returned is not empty, it
+// will be used in the request's Content-Type header.
 type Marshaler interface {
 	Marshal(v interface{}) (data []byte, contentType string, err error)
 }
@@ -94,7 +102,13 @@ func (m *JSONMarshaler) Marshal(v interface{}) (data []byte, contentType string,
 		data, err = json.Marshal(v)
 	}
 
-	return data, MediaTypeJSON, merry.Wrap(err)
+	return data, contentTypeJSON, merry.Wrap(err)
+}
+
+// Apply implements Option.
+func (m *JSONMarshaler) Apply(r *Requester) error {
+	r.Marshaler = m
+	return nil
 }
 
 // XMLMarshaler implements Marshaler and Unmarshaler.  It marshals values to
@@ -120,7 +134,13 @@ func (m *XMLMarshaler) Marshal(v interface{}) (data []byte, contentType string, 
 	} else {
 		data, err = xml.Marshal(v)
 	}
-	return data, MediaTypeXML, merry.Wrap(err)
+	return data, contentTypeXML, merry.Wrap(err)
+}
+
+// Apply implements Option.
+func (m *XMLMarshaler) Apply(r *Requester) error {
+	r.Marshaler = m
+	return nil
 }
 
 // FormMarshaler implements Marshaler.  It marshals values into URL-Encoded form data.
@@ -133,27 +153,35 @@ func (*FormMarshaler) Marshal(v interface{}) (data []byte, contentType string, e
 	switch t := v.(type) {
 	case map[string][]string:
 		urlV := url.Values(t)
-		return []byte(urlV.Encode()), MediaTypeForm, nil
+		return []byte(urlV.Encode()), contentTypeForm, nil
 	case map[string]string:
 		urlV := url.Values{}
 		for key, value := range t {
 			urlV.Set(key, value)
 		}
-		return []byte(urlV.Encode()), MediaTypeForm, nil
+		return []byte(urlV.Encode()), contentTypeForm, nil
 	case url.Values:
-		return []byte(t.Encode()), MediaTypeForm, nil
+		return []byte(t.Encode()), contentTypeForm, nil
 	default:
 		values, err := goquery.Values(v)
 		if err != nil {
 			return nil, "", merry.Prepend(err, "invalid form struct")
 		}
-		return []byte(values.Encode()), MediaTypeForm, nil
+		return []byte(values.Encode()), contentTypeForm, nil
 	}
+}
+
+// Apply implements Option.
+func (m *FormMarshaler) Apply(r *Requester) error {
+	r.Marshaler = m
+	return nil
 }
 
 // MultiUnmarshaler implements Unmarshaler.  It uses the value of the Content-Type header in the
 // response to choose between the JSON and XML unmarshalers.  If Content-Type is something else,
 // an error is returned.
+//
+// MultiUnmarshaler is the default Unmarshaler.
 type MultiUnmarshaler struct {
 	jsonMar JSONMarshaler
 	xmlMar  XMLMarshaler
@@ -168,4 +196,10 @@ func (m *MultiUnmarshaler) Unmarshal(data []byte, contentType string, v interfac
 		return m.xmlMar.Unmarshal(data, contentType, v)
 	}
 	return merry.Errorf("unsupported content type: %s", contentType)
+}
+
+// Apply implements Unmarshaler
+func (m *MultiUnmarshaler) Apply(r *Requester) error {
+	r.Unmarshaler = m
+	return nil
 }

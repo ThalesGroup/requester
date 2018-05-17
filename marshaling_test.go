@@ -2,8 +2,10 @@ package requester
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io/ioutil"
 	"net/url"
 	"testing"
 )
@@ -21,7 +23,7 @@ func TestJSONMarshaler_Marshal(t *testing.T) {
 
 	d, ct, err := m.Marshal(v)
 	require.NoError(t, err)
-	require.Equal(t, "application/json", ct)
+	require.Equal(t, "application/json; charset=UTF-8", ct)
 	require.Equal(t, expected, d)
 
 	m.Indent = true
@@ -52,7 +54,7 @@ func TestXMLMarshaler_Marshal(t *testing.T) {
 	b, ct, err := m.Marshal(testModel{"red", 30})
 	require.NoError(t, err)
 
-	assert.Equal(t, "application/xml", ct)
+	assert.Equal(t, "application/xml; charset=UTF-8", ct)
 
 	assert.Equal(t, `<testModel><color>red</color><count>30</count></testModel>`, string(b))
 
@@ -136,7 +138,7 @@ func TestFormMarshaler_Marshal(t *testing.T) {
 		d, ct, err := m.Marshal(testCase.input)
 
 		require.NoError(t, err)
-		assert.Equal(t, "application/x-www-form-urlencoded", ct)
+		assert.Equal(t, "application/x-www-form-urlencoded; charset=UTF-8", ct)
 		assert.Equal(t, testCase.output, string(d))
 	}
 
@@ -146,4 +148,53 @@ func TestFormMarshaler_Marshal(t *testing.T) {
 	//
 	//assert.Equal(t, "application/x-www-form-urlencoded", ct)
 	//assert.Equal(t, "color=red&count=30", string(d))
+}
+
+func ExampleFormMarshaler() {
+	// *FormMarshaler implements Option, so it can be passed directly to functions
+	// which accept Options.
+	req, _ := Request(&FormMarshaler{}, Body(url.Values{"color": []string{"red"}}))
+
+	b, _ := ioutil.ReadAll(req.Body)
+
+	fmt.Println(string(b))
+	fmt.Println(req.Header.Get(HeaderContentType))
+
+	// Output:
+	// color=red
+	// application/x-www-form-urlencoded; charset=UTF-8
+}
+
+func ExampleJSONMarshaler() {
+	// *JSONMarshaler implements Option, so it can be passed directly to functions
+	// which accept Options.
+	req, _ := Request(&JSONMarshaler{Indent: false}, Body(map[string]interface{}{"color": "red"}))
+
+	b, _ := ioutil.ReadAll(req.Body)
+
+	fmt.Println(string(b))
+	fmt.Println(req.Header.Get(HeaderContentType))
+
+	// Output:
+	// {"color":"red"}
+	// application/json; charset=UTF-8
+}
+
+func ExampleXMLMarshaler() {
+	type Resource struct {
+		Color string
+	}
+
+	// *XMLMarshaler implements Option, so it can be passed directly to functions
+	// which accept Options.
+	req, _ := Request(&XMLMarshaler{Indent: false}, Body(Resource{Color: "red"}))
+
+	b, _ := ioutil.ReadAll(req.Body)
+
+	fmt.Println(string(b))
+	fmt.Println(req.Header.Get(HeaderContentType))
+
+	// Output:
+	// <Resource><Color>red</Color></Resource>
+	// application/xml; charset=UTF-8
 }

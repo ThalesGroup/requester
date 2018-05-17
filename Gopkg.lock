@@ -20,12 +20,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  name = "github.com/go-errors/errors"
-  packages = ["."]
-  revision = "a6af135bd4e28680facf08a3d206b454abc877a4"
-  version = "v1.0.1"
-
-[[projects]]
   branch = "master"
   name = "github.com/google/go-querystring"
   packages = ["query"]
@@ -49,6 +43,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "17b463711d9d8f6a9bd3ec34abaaac81f26aef1e2d3f7976c54b93c15f330a84"
+  inputs-digest = "4517bf970d0bf69ed3f498d467d541a1cf27fbcb4f82981f45610b7e349278c3"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -117,6 +117,8 @@ func ExampleMockDoer() {
 		Body(map[string]interface{}{"color": "blue"}),
 	)
 
+	// Since DoerFunc is an Option, it can be passed directly to functions
+	// which accept Options.
 	resp, body, _ := Receive(d)
 
 	fmt.Println(resp.StatusCode)

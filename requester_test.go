@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -161,7 +162,7 @@ func TestRequester_Request_QueryParams(t *testing.T) {
 		{[]Option{URL("http://a.io"), QueryParams(paramsA)}, "http://a.io?limit=30"},
 		{[]Option{URL("http://a.io/?color=red"), QueryParams(paramsA)}, "http://a.io/?color=red&limit=30"},
 		{[]Option{URL("http://a.io"), QueryParams(paramsA), QueryParams(paramsB)}, "http://a.io?count=25&kind_name=recent&limit=30"},
-		{[]Option{URL("http://a.io/"), RelativeURL("foo?relPath=yes"), QueryParams(paramsA)}, "http://a.io/foo?relPath=yes&limit=30"},
+		{[]Option{URL("http://a.io/"), RelativeURL("foo?relPath=yes"), QueryParams(paramsA)}, "http://a.io/foo?limit=30&relPath=yes"},
 	}
 	for _, c := range cases {
 		t.Run("", func(t *testing.T) {
@@ -180,14 +181,14 @@ func TestRequester_Request_Body(t *testing.T) {
 		expectedContentType string
 	}{
 		// Body (json)
-		{[]Option{Body(modelA)}, `{"text":"note","favorite_count":12}`, MediaTypeJSON},
-		{[]Option{Body(&modelA)}, `{"text":"note","favorite_count":12}`, MediaTypeJSON},
-		{[]Option{Body(&FakeModel{})}, `{}`, MediaTypeJSON},
-		{[]Option{Body(FakeModel{})}, `{}`, MediaTypeJSON},
+		{[]Option{Body(modelA)}, `{"text":"note","favorite_count":12}`, MediaTypeJSON + "; charset=UTF-8"},
+		{[]Option{Body(&modelA)}, `{"text":"note","favorite_count":12}`, MediaTypeJSON + "; charset=UTF-8"},
+		{[]Option{Body(&FakeModel{})}, `{}`, MediaTypeJSON + "; charset=UTF-8"},
+		{[]Option{Body(FakeModel{})}, `{}`, MediaTypeJSON + "; charset=UTF-8"},
 		// BodyForm
-		{[]Option{Form(), Body(paramsA)}, "limit=30", MediaTypeForm},
-		{[]Option{Form(), Body(paramsB)}, "count=25&kind_name=recent", MediaTypeForm},
-		{[]Option{Form(), Body(&paramsB)}, "count=25&kind_name=recent", MediaTypeForm},
+		{[]Option{Form(), Body(paramsA)}, "limit=30", MediaTypeForm + "; charset=UTF-8"},
+		{[]Option{Form(), Body(paramsB)}, "count=25&kind_name=recent", MediaTypeForm + "; charset=UTF-8"},
+		{[]Option{Form(), Body(&paramsB)}, "count=25&kind_name=recent", MediaTypeForm + "; charset=UTF-8"},
 		// Raw bodies, skips marshaler
 		{[]Option{Body(strings.NewReader("this-is-a-test"))}, "this-is-a-test", ""},
 		{[]Option{Body("this-is-a-test")}, "this-is-a-test", ""},
@@ -650,4 +651,95 @@ func BenchmarkRequester_Receive(b *testing.B) {
 		})
 	})
 
+}
+
+func TestEverything(t *testing.T) {
+
+	type Resource struct {
+		ID    string `json:"id"`
+		Color string `json:"color"`
+	}
+
+	s := httptest.NewServer(MockHandler(201,
+		JSON(true),
+		Body(&Resource{Color: "red", ID: "123"}),
+	))
+	defer s.Close()
+
+}
+
+func ExampleRequester_Receive() {
+	r := MustNew(MockDoer(200,
+		Body("red"),
+	))
+
+	resp, body, _ := r.Receive(Get("http://api.com/resource"))
+
+	fmt.Println(resp.StatusCode, string(body))
+
+	// Output: 200 red
+}
+
+func ExampleRequester_Receive_unmarshal() {
+	type Resource struct {
+		Color string `json:"color"`
+	}
+
+	r := MustNew(MockDoer(200,
+		JSON(true),
+		Body(Resource{Color: "red"}),
+	))
+
+	var resource Resource
+
+	resp, body, _ := r.Receive(&resource, Get("http://api.com/resource"))
+
+	fmt.Println(resp.StatusCode)
+	fmt.Println(string(body))
+	fmt.Println(resource.Color)
+
+	// Output:
+	// 200
+	// {
+	//   "color": "red"
+	// }
+	// red
+}
+
+func ExampleRequester_Request() {
+	r := MustNew(
+		Get("http://api.com/resource"),
+		Header("X-Color", "red"),
+		QueryParam("flavor", "vanilla"),
+	)
+
+	req, _ := r.Request(
+		JSON(true),
+		Body(map[string]interface{}{"size": "big"}),
+	)
+
+	fmt.Printf("%s %s %s\n", req.Method, req.URL.String(), req.Proto)
+	fmt.Println(HeaderContentType+":", req.Header.Get(HeaderContentType))
+	fmt.Println(HeaderAccept+":", req.Header.Get(HeaderAccept))
+	fmt.Println("X-Color:", req.Header.Get("X-Color"))
+	io.Copy(os.Stdout, req.Body)
+
+	//Output:
+	// GET http://api.com/resource?flavor=vanilla HTTP/1.1
+	// Content-Type: application/json
+	// Accept: application/json
+	// X-Color: red
+	// {
+	//   "size": "big"
+	// }
+}
+
+func ExampleRequester_Send() {
+	r := MustNew(MockDoer(204))
+
+	resp, _ := r.Send(Get("resources/1"))
+
+	fmt.Println(resp.StatusCode)
+
+	// Output: 204
 }

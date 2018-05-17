@@ -1,15 +1,14 @@
 package requester_test
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/gemalto/requester"
-	"github.com/go-errors/errors"
-	"io/ioutil"
+	. "github.com/gemalto/requester"
+	"github.com/gemalto/requester/httpclient"
+	"github.com/gemalto/requester/httptestutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"time"
 )
 
 func Example() {
@@ -20,8 +19,8 @@ func Example() {
 	}))
 	defer s.Close()
 
-	resp, body, _ := requester.Receive(
-		requester.Get(s.URL),
+	resp, body, _ := Receive(
+		Get(s.URL),
 	)
 
 	fmt.Println(resp.StatusCode)
@@ -40,73 +39,99 @@ func Example_receive() {
 	}))
 	defer s.Close()
 
-	respStruct := struct {
-		Color string
+	r := struct {
+		Color string `json:"color"`
 	}{}
 
-	requester.Receive(&respStruct,
-		requester.Get(s.URL),
-	)
+	Receive(&r, Get(s.URL))
 
-	fmt.Println(respStruct.Color)
+	fmt.Println(r.Color)
 	// Output: red
 }
 
-var requestBody struct {
-	Color string `json:"color"`
-}
-
-type Resource struct {
-	ID    string `json:"id"`
-	Color string `json:"color"`
-}
-
-var ctx context.Context
-
-func Example_native() {
-	bodyBytes, err := json.Marshal(requestBody)
-	if err != nil {
-		panic(err)
+func Example_everything() {
+	type Resource struct {
+		ID    string `json:"id"`
+		Color string `json:"color"`
 	}
 
-	req, err := http.NewRequest("POST", "http://api.com/resources/", bytes.NewReader(bodyBytes))
-	if err != nil {
-		panic(err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req = req.WithContext(ctx)
+	s := httptest.NewServer(MockHandler(201,
+		JSON(true),
+		Body(&Resource{Color: "red", ID: "123"}),
+	))
+	defer s.Close()
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		panic(err)
-	}
-
-	if resp.StatusCode != 201 {
-		panic(errors.New("expected code 201"))
-	}
-
-	respBody, _ := ioutil.ReadAll(resp.Body)
-	var r Resource
-	if err := json.Unmarshal(respBody, &r); err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("%d %s %v", resp.StatusCode, string(respBody), r)
-}
-
-func Example_demo() {
-	var r Resource
-
-	resp, body, err := requester.ReceiveContext(ctx, &r,
-		requester.JSON(false),
-		requester.Body(requestBody),
-		requester.Post("http://api.com/resources/"),
-		requester.ExpectCode(201),
+	r := httptestutil.Requester(s,
+		Post("/resources?size=big"),
+		BearerAuth("atoken"),
+		JSON(true),
+		Body(&Resource{Color: "red"}),
+		ExpectCode(201),
+		Header("X-Request-Id", "5"),
+		QueryParam("flavor", "vanilla"),
+		QueryParams(&struct {
+			Type string `url:"type"`
+		}{Type: "upload"}),
+		Client(
+			httpclient.SkipVerify(true),
+			httpclient.Timeout(5*time.Second),
+			httpclient.MaxRedirects(3),
+		),
 	)
+
+	r.MustApply(DumpToStderr())
+	httptestutil.Dump(s, os.Stderr)
+
+	serverInspector := httptestutil.Inspect(s)
+	clientInspector := Inspect(r)
+
+	var resource Resource
+
+	resp, body, err := r.Receive(&resource)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("%d %s %v", resp.StatusCode, string(body), r)
+	fmt.Println("client-side request url path:", clientInspector.Request.URL.Path)
+	fmt.Println("client-side request query:", clientInspector.Request.URL.RawQuery)
+	fmt.Println("client-side request body:", clientInspector.RequestBody.String())
+
+	ex := serverInspector.LastExchange()
+	fmt.Println("server-side request authorization header:", ex.Request.Header.Get("Authorization"))
+	fmt.Println("server-side request request body:", ex.RequestBody.String())
+	fmt.Println("server-side request response body:", ex.ResponseBody.String())
+
+	fmt.Println("client-side response body:", clientInspector.ResponseBody.String())
+
+	fmt.Println("response status code:", resp.StatusCode)
+	fmt.Println("raw response body:", string(body))
+	fmt.Println("unmarshaled response body:", resource)
+
+	// Output:
+	// client-side request url path: /resources
+	// client-side request query: flavor=vanilla&size=big&type=upload
+	// client-side request body: {
+	//   "id": "",
+	//   "color": "red"
+	// }
+	// server-side request authorization header: Bearer atoken
+	// server-side request request body: {
+	//   "id": "",
+	//   "color": "red"
+	// }
+	// server-side request response body: {
+	//   "id": "123",
+	//   "color": "red"
+	// }
+	// client-side response body: {
+	//   "id": "123",
+	//   "color": "red"
+	// }
+	// response status code: 201
+	// raw response body: {
+	//   "id": "123",
+	//   "color": "red"
+	// }
+	// unmarshaled response body: {123 red}
+
 }

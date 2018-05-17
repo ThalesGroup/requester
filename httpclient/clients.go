@@ -37,7 +37,7 @@ func New(opts ...Option) (*http.Client, error) {
 	return c, Apply(c, opts...)
 }
 
-// Apply applies options to an existing function.
+// Apply applies options to an existing client.
 func Apply(c *http.Client, opts ...Option) error {
 	for _, opt := range opts {
 		err := opt.Apply(c)
@@ -85,7 +85,7 @@ func (f OptionFunc) Apply(c *http.Client) error {
 //
 // The argument will never be nil.  TransportOption will
 // create a default http.Transport (configured identically
-// to the http.DefaultClient.Transport) if necessary.
+// to the http.DefaultTransport) if necessary.
 //
 // If the client's transport is not a *http.Transport, an
 // error is returned.
@@ -108,10 +108,13 @@ func (f TransportOption) Apply(c *http.Client) error {
 	return f(transport)
 }
 
-// A TLSOption configures the TLS configuration of the client.
+// A TLSOption is a type of Option which configures the
+// TLS configuration of the client.
 //
 // The argument will never be nil.  A new, default config will be
-// created in necessary.
+// created if necessary.
+//
+// See SkipVerify for an example implementation.
 type TLSOption func(c *tls.Config) error
 
 // Apply implements Option.

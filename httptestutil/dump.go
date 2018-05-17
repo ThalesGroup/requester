@@ -10,7 +10,7 @@ import (
 	"net/http/httputil"
 )
 
-// DumpTo wraps an http.Handler.  It dumps requests and responses to
+// DumpTo wraps an http.Handler in a new handler.  The new handler dumps requests and responses to
 // a writer, using the httputil.DumpRequest and httputil.DumpResponse functions.
 func DumpTo(handler http.Handler, writer io.Writer) http.Handler {
 

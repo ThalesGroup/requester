@@ -3,10 +3,13 @@ package requester
 import (
 	"context"
 	"fmt"
+	"github.com/gemalto/requester/httpclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 )
 
@@ -373,36 +376,234 @@ func TestForm(t *testing.T) {
 	assert.IsType(t, &FormMarshaler{}, reqs.Marshaler)
 }
 
-func ExampleExpectSuccessCode() {
+func ExampleAccept() {
+	r := MustNew(Accept(MediaTypeJSON))
 
-	resp, body, err := Receive(
-		Get("/profile"),
-		MockDoer(400, Body("bad format")),
-		ExpectSuccessCode(),
-	)
+	fmt.Println(r.Headers().Get(HeaderAccept))
 
-	fmt.Println(resp.StatusCode)
-	fmt.Println(string(body))
-	fmt.Println(err.Error())
-	// Output:
-	// 400
-	// bad format
-	// server returned an unsuccessful status code: 400
+	// Output: application/json
 }
 
-func ExampleExpectCode() {
-
-	resp, body, err := Receive(
-		Get("/profile"),
-		MockDoer(400, Body("bad format")),
-		ExpectCode(201),
+func ExampleAddHeader() {
+	r := MustNew(
+		AddHeader("color", "red"),
+		AddHeader("color", "blue"),
 	)
 
-	fmt.Println(resp.StatusCode)
-	fmt.Println(string(body))
-	fmt.Println(err.Error())
-	// Output:
-	// 400
-	// bad format
-	// server returned unexpected status code.  expected: 201, received: 400
+	fmt.Println(r.Headers()["Color"])
+
+	// Output: [red blue]
+}
+
+func ExampleDeleteHeader() {
+	r := Requester{
+		Header: http.Header{
+			"Color":  []string{"red"},
+			"Flavor": []string{"vanilla"},
+		},
+	}
+
+	r.MustApply(DeleteHeader("color"))
+
+	fmt.Println(r.Header)
+
+	// Output: map[Flavor:[vanilla]]
+}
+
+func ExampleHeader() {
+	r := MustNew(Header("color", "red"))
+
+	fmt.Println(r.Header)
+
+	// Output: map[Color:[red]]
+}
+
+func ExampleBasicAuth() {
+	r := MustNew(BasicAuth("user", "password"))
+
+	fmt.Println(r.Header.Get(HeaderAuthorization))
+
+	// Output: Basic dXNlcjpwYXNzd29yZA==
+}
+
+func ExampleBearerAuth() {
+	r := MustNew(BearerAuth("1234"))
+
+	fmt.Println(r.Header.Get(HeaderAuthorization))
+
+	// Output: Bearer 1234
+}
+
+func ExampleBody() {
+	v := struct {
+		Color string `json:"color"`
+	}{
+		Color: "red",
+	}
+
+	req, _ := Request(Body(v))
+
+	b, _ := ioutil.ReadAll(req.Body)
+
+	fmt.Println(string(b))
+
+	// Output: {"color":"red"}
+}
+
+// The body value doesn't need to be a struct.  So long
+// as the Marshaler can marshal it.
+func ExampleBody_map() {
+	req, _ := Request(Body(map[string]interface{}{"color": "red"}))
+
+	b, _ := ioutil.ReadAll(req.Body)
+
+	fmt.Println(string(b))
+
+	// Output: {"color":"red"}
+}
+
+func ExampleBody_raw() {
+	req, _ := Request(
+		// all these are equivalent
+		Body("red"),
+		Body([]byte("red")),
+		Body(strings.NewReader("red")),
+	)
+
+	b, _ := ioutil.ReadAll(req.Body)
+
+	fmt.Println(string(b))
+
+	// Output: red
+}
+
+func ExampleClient() {
+	Send(
+		URL("https://localhost:6060"),
+		Client(httpclient.SkipVerify(true)),
+	)
+}
+
+func ExampleContentType() {
+	r := MustNew(ContentType(MediaTypeTextPlain))
+
+	fmt.Println(r.Headers().Get(HeaderContentType))
+
+	// Output: text/plain
+}
+
+func ExampleMethod() {
+	r := MustNew(Method("CONNECT", "/resources/", "1"))
+
+	fmt.Println(r.Method, r.URL.String())
+
+	// Output: CONNECT /resources/1
+}
+
+func ExampleDelete() {
+	r := MustNew(Delete("/resources/", "1"))
+
+	fmt.Println(r.Method, r.URL.String())
+
+	// Output: DELETE /resources/1
+}
+
+func ExamplePut() {
+	r := MustNew(Put("/resources/", "1"))
+
+	fmt.Println(r.Method, r.URL.String())
+
+	// Output: PUT /resources/1
+}
+
+func ExamplePatch() {
+	r := MustNew(Patch("/resources/", "1"))
+
+	fmt.Println(r.Method, r.URL.String())
+
+	// Output: PATCH /resources/1
+}
+
+func ExamplePost() {
+	r := MustNew(Post("/resources/", "1"))
+
+	fmt.Println(r.Method, r.URL.String())
+
+	// Output: POST /resources/1
+}
+
+func ExampleGet() {
+	r := MustNew(Get("/resources/", "1"))
+
+	fmt.Println(r.Method, r.URL.String())
+
+	// Output: GET /resources/1
+}
+
+func ExampleHead() {
+	r := MustNew(Head("/resources/", "1"))
+
+	fmt.Println(r.Method, r.URL.String())
+
+	// Output: HEAD /resources/1
+}
+
+func ExampleHost() {
+	r, _ := Request(Host("api.com"))
+
+	fmt.Println(r.Host)
+
+	// Output: api.com
+}
+
+func ExampleQueryParam() {
+	r := MustNew(QueryParam("color", "red"))
+
+	fmt.Println(r.Params().Encode())
+
+	// Output: color=red
+}
+
+func ExampleQueryParams() {
+	type Params struct {
+		Color string `url:"color"`
+	}
+
+	// QueryParams option accepts several types
+	r := MustNew(QueryParams(
+		Params{Color: "red"},                   // struct with url tags
+		map[string]string{"flavor": "vanilla"}, // map[string]string
+		map[string][]string{"size": {"big"}},   // map[string][]string
+		url.Values{"volume": []string{"loud"}}, // url.Values
+	))
+
+	// params already encoded in the URL are retained
+	req, _ := r.Request(RelativeURL("?weight=heavy"))
+
+	fmt.Println(req.URL.RawQuery)
+
+	// Output: color=red&flavor=vanilla&size=big&volume=loud&weight=heavy
+}
+
+func ExampleRelativeURL() {
+	r := MustNew(
+		Get("http://test.com/green/"),
+		// See the docs for url.URL#ResolveReference for details
+		RelativeURL("red/", "blue"),
+	)
+
+	fmt.Println(r.URL.String())
+
+	// Output: http://test.com/green/red/blue
+}
+
+func ExampleRequester_Clone() {
+	base, _ := New(Get("https://api.io/"))
+
+	foo := base.Clone()
+	foo.Apply(Get("foo/"))
+
+	bar := base.Clone()
+	bar.Apply(Get("bar/"))
+
 }

@@ -7,7 +7,7 @@ import (
 
 // These are tools for writing tests.
 
-// MockDoer creates a mock Doer which returns a mocked response.
+// MockDoer creates a Doer which returns a mocked response, for writing tests.
 // By default, the mocked response will contain the status code,
 // and typical default values for some standard response fields, like
 // the ProtoXXX fields.
@@ -15,7 +15,7 @@ import (
 // Options can be passed in, which are used to construct a template
 // http.Request.  The fields of the template request are copied into
 // the mocked responses (http.Request and http.Response share most fields,
-// so we're leverage the rich set of requester.Options to build the response).
+// so we're leveraging the rich set of requester.Options to build the response).
 func MockDoer(statusCode int, options ...Option) DoerFunc {
 	return func(req *http.Request) (*http.Response, error) {
 		resp := MockResponse(statusCode, options...)

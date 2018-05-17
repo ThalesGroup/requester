@@ -25,7 +25,7 @@ const (
 )
 
 // Option applies some setting to a Requester object.  Options can be passed
-// as arguments to most of Requester' methods.
+// as arguments to most of Requester's methods.
 type Option interface {
 
 	// Apply modifies the Requester argument.  The Requester pointer will never be nil.
@@ -42,8 +42,13 @@ func (f OptionFunc) Apply(r *Requester) error {
 	return f(r)
 }
 
-// With clones the Requester object, then applies the options
+// With clones the Requester, then applies the options
 // to the clone.
+//
+// Equivalent to:
+//
+//     r2 := r.Clone()
+//     r2.Apply(...)
 func (r *Requester) With(opts ...Option) (*Requester, error) {
 	r2 := r.Clone()
 	err := r2.Apply(opts...)
@@ -53,8 +58,13 @@ func (r *Requester) With(opts ...Option) (*Requester, error) {
 	return r2, nil
 }
 
-// MustWith close the Requester, then applies the options to
+// MustWith clones the Requester, then applies the options to
 // the clone.  Panics if applying options returns an error
+//
+// Equivalent to:
+//
+//     r2 := r.Clone()
+//     r2.MustApply(...)
 func (r *Requester) MustWith(opts ...Option) *Requester {
 	if r2, err := r.With(opts...); err != nil {
 		panic(err)
@@ -203,16 +213,6 @@ func URL(rawurl string) Option {
 
 // RelativeURL resolves the arg as a relative URL references against
 // the current URL, using the standard lib's url.URL.ResolveReference() method.
-// For example:
-//
-//     r, _ := requester.New(Get("http://test.com"), RelativeURL("red"))
-//     fmt.Println(r.URL.String())  // http://test.com/red
-//
-// Multiple arguments will be resolved in order:
-//
-//     r, _ := requester.New(Get("http://test.com"), RelativeURL("red", "blue"))
-//     fmt.Println(r.URL.String())  // http://test.com/red/blue
-//
 func RelativeURL(paths ...string) Option {
 	return OptionFunc(func(r *Requester) error {
 		for _, p := range paths {
@@ -254,13 +254,13 @@ func QueryParams(queryStructs ...interface{}) Option {
 			var values url.Values
 			switch t := queryStruct.(type) {
 			case nil:
+			case map[string]string:
+				for key, value := range t {
+					s.QueryParams.Add(key, value)
+				}
+				continue
 			case map[string][]string:
 				values = url.Values(t)
-			case map[string]string:
-				values = url.Values{}
-				for key, value := range t {
-					values.Set(key, value)
-				}
 			case url.Values:
 				values = t
 			default:
@@ -297,7 +297,15 @@ func QueryParam(k, v string) Option {
 	})
 }
 
-// Body sets Requester.Body
+// Body sets the body of the request.
+//
+// If the body value is a string, []byte, io.Reader, the
+// value will be used directly as the body of the request.
+//
+// If the value is nil, the request body will be empty.
+//
+// If the value is anything else, Requester will use
+// the Marshaler to marshal the value into the request body.
 func Body(body interface{}) Option {
 	return OptionFunc(func(b *Requester) error {
 		b.Body = body
@@ -384,7 +392,7 @@ func Form() Option {
 }
 
 // Client replaces Requester.Doer with an *http.Client.  The client
-// will be created and configured using the `httpclient` package.
+// will be created and configured using the httpclient package.
 func Client(opts ...httpclient.Option) Option {
 	return OptionFunc(func(b *Requester) error {
 		c, err := httpclient.New(opts...)

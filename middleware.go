@@ -8,23 +8,7 @@ import (
 	"os"
 )
 
-// Middleware can be used to wrap Doers with additional functionality:
-//
-//     loggingMiddleware := func(next Doer) Doer {
-//         return func(req *http.Request) (*http.Response, error) {
-//             logRequest(req)
-//             return next(req)
-//         }
-//     }
-//
-// Middleware can be applied to a Requester object with the Use() option:
-//
-//     reqs.Apply(requester.Use(loggingMiddleware))
-//
-// Middleware itself is an Option, so it can also be applied directly:
-//
-//     reqs.Apply(Middleware(loggingMiddleware))
-//
+// Middleware can be used to wrap Doers with additional functionality.
 type Middleware func(Doer) Doer
 
 // Apply implements Option
@@ -74,7 +58,7 @@ func DumpToStout() Middleware {
 	return Dump(os.Stdout)
 }
 
-// DumpToStderr dumpe requests and responses to os.Stderr
+// DumpToStderr dumps requests and responses to os.Stderr
 func DumpToStderr() Middleware {
 	return Dump(os.Stderr)
 }
@@ -90,15 +74,17 @@ func (f logFunc) Write(p []byte) (n int, err error) {
 // logf is compatible with fmt.Print(), testing.T.Log, or log.XXX()
 // functions.
 //
-// Request and response will be logged separately.  Though logf
-// takes a variadic arg, it will only be called with one string
-// arg at a time.
+// logf will be invoked once for the request, and once for the response.
+// Each invocation will only have a single argument (the entire request
+// or response is logged as a single string value).
 func DumpToLog(logf func(a ...interface{})) Middleware {
 	return Dump(logFunc(logf))
 }
 
-// ExpectCode is middleware which generates an error if the response's status code does not match
+// ExpectCode generates an error if the response's status code does not match
 // the expected code.
+//
+// The response body will still be read and returned.
 func ExpectCode(code int) Middleware {
 	return func(next Doer) Doer {
 		return DoerFunc(func(req *http.Request) (*http.Response, error) {
@@ -114,6 +100,8 @@ func ExpectCode(code int) Middleware {
 
 // ExpectSuccessCode is middleware which generates an error if the response's status code is not between 200 and
 // 299.
+//
+// The response body will still be read and returned.
 func ExpectSuccessCode() Middleware {
 	return func(next Doer) Doer {
 		return DoerFunc(func(req *http.Request) (*http.Response, error) {
