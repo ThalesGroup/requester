@@ -1,7 +1,3 @@
-# Sling Changelog
-
-Notable changes between releases.
-
 ## 0.3.0
 ### Added
 - Requester.MustWith(): a version of With() which panics on errors
