@@ -2,47 +2,65 @@
 
 
 [[projects]]
+  digest = "1:728348e8f2745248fc7e536c9f4b80de07d96fa1c2a87b7f2c95c0d6dd98271a"
   name = "github.com/ansel1/merry"
   packages = ["."]
+  pruneopts = ""
   revision = "c8d518a00eb65f58411f49c1c84ee99c02b699f5"
   version = "v1.0.2"
 
 [[projects]]
+  digest = "1:56c130d885a4aacae1dd9c7b71cfe39912c7ebc1ff7d2b46083c8812996dc43b"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
+  pruneopts = ""
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:c5ab426295a72261f029ea768ff8c518ba848edafc3163a8500f37426c213456"
   name = "github.com/felixge/httpsnoop"
   packages = ["."]
+  pruneopts = ""
   revision = "eadd4fad6aac69ae62379194fe0219f3dbc80fd3"
   version = "v1.0.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:9abc49f39e3e23e262594bb4fb70abf74c0c99e94f99153f43b143805e850719"
   name = "github.com/google/go-querystring"
   packages = ["query"]
+  pruneopts = ""
   revision = "53e6ce116135b80d037921a7fdd5138cf32d7a8a"
 
 [[projects]]
+  digest = "1:256484dbbcd271f9ecebc6795b2df8cad4c458dd0f5fd82a8c2fa0c29f233411"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
+  pruneopts = ""
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:a30066593578732a356dc7e5d7f78d69184ca65aeeff5939241a3ab10559bb06"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
-    "require"
+    "require",
   ]
+  pruneopts = ""
   revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
   version = "v1.2.1"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4517bf970d0bf69ed3f498d467d541a1cf27fbcb4f82981f45610b7e349278c3"
+  input-imports = [
+    "github.com/ansel1/merry",
+    "github.com/felixge/httpsnoop",
+    "github.com/google/go-querystring/query",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

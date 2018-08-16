@@ -272,6 +272,16 @@ var paramsA = struct {
 }
 var paramsB = FakeParams{KindName: "recent", Count: 25}
 
+var paramsC = struct {
+	Color string     `url:"color"`
+	Size  string     `url:"-"`
+	Child FakeParams `url:"-"`
+}{
+	Color: "red",
+	Size:  "big",
+	Child: FakeParams{KindName: "car", Count: 4},
+}
+
 func TestQueryParams(t *testing.T) {
 	cases := []struct {
 		options        []Option
@@ -286,6 +296,7 @@ func TestQueryParams(t *testing.T) {
 		{[]Option{QueryParams(url.Values{"red": []string{"green"}})}, url.Values{"red": []string{"green"}}},
 		{[]Option{QueryParams(map[string][]string{"red": []string{"green"}})}, url.Values{"red": []string{"green"}}},
 		{[]Option{QueryParams(map[string]string{"red": "green"})}, url.Values{"red": []string{"green"}}},
+		{[]Option{QueryParams(paramsC)}, url.Values{"color": []string{"red"}}},
 	}
 
 	for _, c := range cases {
