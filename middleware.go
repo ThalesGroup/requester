@@ -90,9 +90,10 @@ func ExpectCode(code int) Middleware {
 		return DoerFunc(func(req *http.Request) (*http.Response, error) {
 			resp, err := next.Do(req)
 			if err == nil && resp != nil && resp.StatusCode != code {
-				return resp, merry.Errorf("server returned unexpected status code.  expected: %d, received: %d", code, resp.StatusCode)
+				err := merry.Errorf("server returned unexpected status code.  expected: %d, received: %d", code, resp.StatusCode)
+				err = err.WithHTTPCode(resp.StatusCode)
+				return resp, err
 			}
-
 			return resp, err
 		})
 	}
@@ -107,9 +108,10 @@ func ExpectSuccessCode() Middleware {
 		return DoerFunc(func(req *http.Request) (*http.Response, error) {
 			resp, err := next.Do(req)
 			if err == nil && resp != nil && (resp.StatusCode < 200 || resp.StatusCode > 299) {
-				return resp, merry.Errorf("server returned an unsuccessful status code: %d", resp.StatusCode)
+				err := merry.Errorf("server returned an unsuccessful status code: %d", resp.StatusCode)
+				err = err.WithHTTPCode(resp.StatusCode)
+				return resp, err
 			}
-
 			return resp, err
 		})
 	}

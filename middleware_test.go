@@ -3,6 +3,7 @@ package requester
 import (
 	"bytes"
 	"fmt"
+	"github.com/ansel1/merry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"log"
@@ -77,6 +78,7 @@ func TestExpectCode(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "expected: 203")
 	assert.Contains(t, err.Error(), "received: 407")
+	assert.Equal(t, 407, merry.HTTPCode(err))
 
 }
 
@@ -101,6 +103,7 @@ func TestExpectSuccessCode(t *testing.T) {
 	// but an error should be returned too
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "code: 407")
+	assert.Equal(t, 407, merry.HTTPCode(err))
 }
 
 func ExampleMiddleware() {
