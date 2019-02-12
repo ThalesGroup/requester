@@ -1,3 +1,14 @@
+## 1.0.0
+This marks the API as stable.
+
+### Added
+- Range(): Sets the range header
+- AppendPath(): Adds path elements to the URL path, using slightly different
+  rules than RelativeURL().
+- Contributing guidelines
+### Changed
+- The Makefile no longer auto-installs dep.  It's available via package managers like brew now.
+
 ## 0.3.0
 ### Added
 - Requester.MustWith(): a version of With() which panics on errors

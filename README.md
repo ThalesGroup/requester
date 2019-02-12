@@ -1,8 +1,7 @@
-# Requester[![GoDoc](https://godoc.org/github.com/gemalto/requester?status.png)](https://godoc.org/github.com/gemalto/requester) [![Go Report Card](https://goreportcard.com/badge/github.com/gemalto/requester)](https://goreportcard.com/report/github.com/gemalto/requester)
+# Requester
+[![GoDoc](https://godoc.org/github.com/gemalto/requester?status.png)](https://godoc.org/github.com/gemalto/requester) [![Go Report Card](https://goreportcard.com/badge/github.com/gemalto/requester)](https://goreportcard.com/report/github.com/gemalto/requester)
 
 A.K.A "Yet Another Golang Requests Package"
-
-EXPERIMENTAL:  Until the version reaches 1.0, the API may change, but is unlikely to.
 
 Requester makes it a bit simpler to use Go's `http` package as a client.  As an example, take
 a simple request, with the `http` package:
@@ -77,9 +76,11 @@ The core functions are available on the package, or on instances of Requester{}.
 // just build a request
 Request(...Option) (*http.Request, error)
 RequestContext(context.Context, ...Option) (*http.Request, error)
+
 // build a request and execute it
 Send(...Option) (*http.Response, error)
 SendContext(context.Context, ...Option) (*http.Response, error)
+
 // build and send a request, and handle the response
 Receive(interface{}, ...Option) (*http.Response, []byte, error)
 ReceiveContext(context.Context, interface{}, ...Option) (*http.Response, []byte, error)
@@ -88,15 +89,13 @@ ReceiveContext(context.Context, interface{}, ...Option) (*http.Response, []byte,
 `Receive/ReceiveContext` reads and closes the response body, returns it as a byte slice, 
 and also attempts to unmarshal it into a target value, if one is provided. 
 
-Each of these accept a varargs of functional options, which alter the request,
+Each of these accept variadic functional options, which alter the request,
 the http.Client, or the control how to process the response. `Option` is defined as:
 
 ```go
 type Option interface {
    Apply(*Requester) error
 }
-
-type OptionFunc func(*Requester) error
 ```
 
 # FAQ
@@ -104,7 +103,7 @@ type OptionFunc func(*Requester) error
 - Why, when there are like, 50 other packages that do the exact same thing?
 
 Yeah, good question.  This library started as a few tweaks to `https://github.com/dghubble/sling`.  Then
-it became more of a fork, then a complete rewrite, inspiration from a bunch of other similar libraries.
+it became more of a fork, then a complete rewrite, inspired by a bunch of other similar libraries.
 
 A few things bugged me about other libraries:
 
@@ -137,7 +136,3 @@ to this library.
 Also, making the options into objects improved ergonomics in a few places, like mirroring 
 the main functions (`Request()`, `Send()`, `Receive()`) on the struct and the package.  Options can be passed
 around as arguments or accumulated in slices.
-
-# Contributing
-
-See 
