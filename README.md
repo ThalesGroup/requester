@@ -138,4 +138,6 @@ Also, making the options into objects improved ergonomics in a few places, like 
 the main functions (`Request()`, `Send()`, `Receive()`) on the struct and the package.  Options can be passed
 around as arguments or accumulated in slices.
 
+# Contributing
 
+See 

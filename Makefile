@@ -15,7 +15,6 @@ vet:
 	go vet $(PACKAGES)
 
 tools:
-	go get -u github.com/golang/dep/cmd/dep
 	go get -u github.com/golang/lint/golint
 
 ensure:

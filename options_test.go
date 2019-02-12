@@ -174,7 +174,7 @@ func TestAddHeader(t *testing.T) {
 	}{
 		{[]Option{AddHeader("authorization", "OAuth key=\"value\"")}, http.Header{"Authorization": {"OAuth key=\"value\""}}},
 		// header keys should be canonicalized
-		{[]Option{AddHeader("content-tYPE", "application/json"), AddHeader("User-AGENT", "requester"), AddHeader("rAnge", "bytes:100-200")}, http.Header{"Content-Type": {"application/json"}, "User-Agent": {"requester"}, "Range": {"bytes:100-200"}}},
+		{[]Option{AddHeader("content-tYPE", "application/json"), AddHeader("User-AGENT", "requester")}, http.Header{"Content-Type": {"application/json"}, "User-Agent": {"requester"}}},
 		// values for existing keys should be appended
 		{[]Option{AddHeader("A", "B"), AddHeader("a", "c")}, http.Header{"A": {"B", "c"}}},
 	}
@@ -195,7 +195,6 @@ func TestHeader(t *testing.T) {
 		// should replace existing values associated with key
 		{[]Option{AddHeader("A", "B"), Header("a", "c")}, http.Header{"A": []string{"c"}}},
 		{[]Option{Header("content-type", "A"), Header("Content-Type", "B")}, http.Header{"Content-Type": []string{"B"}}},
-		{[]Option{Header("Range", "bytes:100-200"), Header("range", "bytes:0-")}, http.Header{"Range": []string{"bytes:0-"}}},
 	}
 	for _, c := range cases {
 		t.Run("", func(t *testing.T) {
@@ -258,6 +257,11 @@ func TestBearerAuth(t *testing.T) {
 		_, ok := reqs.Header["Authorization"]
 		require.False(t, ok, "should have removed Authorization header, instead was %s", reqs.Header.Get("Authorization"))
 	})
+}
+
+func TestRange(t *testing.T) {
+	s := MustNew(Range("bytes:1-2")).Header.Get("Range")
+	assert.Equal(t, "bytes:1-2", s)
 }
 
 type FakeParams struct {

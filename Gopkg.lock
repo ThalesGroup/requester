@@ -26,18 +26,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:76c168e8d4bda1c5674618d5b58bf69a1b761b19340636f49e34245736eb4ca5"
-  name = "github.com/gemalto/requester"
-  packages = [
-    ".",
-    "httpclient",
-    "httptestutil",
-  ]
-  pruneopts = ""
-  revision = "333b225fba2fddc7ae24b1ff7c86f5b27a7582f8"
-  version = "v0.3.2"
-
-[[projects]]
   digest = "1:cea4aa2038169ee558bf507d5ea02c94ca85bcca28a4c7bb99fd59b31e43a686"
   name = "github.com/google/go-querystring"
   packages = ["query"]
@@ -70,9 +58,6 @@
   input-imports = [
     "github.com/ansel1/merry",
     "github.com/felixge/httpsnoop",
-    "github.com/gemalto/requester",
-    "github.com/gemalto/requester/httpclient",
-    "github.com/gemalto/requester/httptestutil",
     "github.com/google/go-querystring/query",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
