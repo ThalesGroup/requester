@@ -2,11 +2,12 @@ package requester
 
 import (
 	"encoding/base64"
+	"net/http"
+	"net/url"
+
 	"github.com/ansel1/merry"
 	"github.com/gemalto/requester/httpclient"
 	goquery "github.com/google/go-querystring/query"
-	"net/http"
-	"net/url"
 )
 
 // HTTP constants.
@@ -14,6 +15,7 @@ const (
 	HeaderAccept        = "Accept"
 	HeaderContentType   = "Content-Type"
 	HeaderAuthorization = "Authorization"
+	HeaderRange         = "Range"
 
 	MediaTypeJSON          = "application/json"
 	MediaTypeXML           = "application/xml"
@@ -337,6 +339,11 @@ func Accept(accept string) Option {
 // ContentType sets the Content-Type header.
 func ContentType(contentType string) Option {
 	return Header(HeaderContentType, contentType)
+}
+
+// Range sets the Range header.
+func Range(byteRange string) Option {
+	return Header(HeaderRange, byteRange)
 }
 
 // Host sets Requester.Host
