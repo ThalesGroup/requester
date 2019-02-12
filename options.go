@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"net/http"
 	"net/url"
+	"strings"
+	"unicode"
 
 	"github.com/ansel1/merry"
 	"github.com/gemalto/requester/httpclient"
@@ -29,7 +31,6 @@ const (
 // Option applies some setting to a Requester object.  Options can be passed
 // as arguments to most of Requester's methods.
 type Option interface {
-
 	// Apply modifies the Requester argument.  The Requester pointer will never be nil.
 	// Returning an error will stop applying the request of the Options, and the error
 	// will float up to the original caller.
@@ -229,6 +230,82 @@ func RelativeURL(paths ...string) Option {
 			}
 		}
 		return nil
+	})
+}
+
+// AppendPath appends path elements
+// to the end of the URL.Path.  It ensures it won't create duplicate
+// slashes between elements, and will trim out empty elements.
+//
+// Unlike RelativeURL(), it doesn't matter whether
+// elements have trailing slashes or not, all elements
+// will still be retained in final path.   RelativeURL() follows
+// the rules of resolving relative URLs against absolute URLs, but
+// the results are often unexpected or inconvenient.  This option
+// is better suited when simple joining a set path elements together.
+//
+// For example:
+//
+//     r := requester.MustNew(requester.URL("http://test.com/users/bob"))
+//	   fmt.Println(r.MustWith(requester.RelativeURL("frank")).URL.String())
+//	   fmt.Println(r.MustWith(requester.RelativeURL("/frank")).URL.String())
+//	   fmt.Println(r.MustWith(requester.RelativeURL("frank","nicknames")).URL.String())
+//
+//	   fmt.Println(r.MustWith(appendPath("frank")).URL.String())
+//	   fmt.Println(r.MustWith(appendPath("/frank")).URL.String())
+//	   fmt.Println(r.MustWith(appendPath("frank","nicknames")).URL.String())
+//
+// output:
+// http://test.com/users/frank
+// http://test.com/frank
+// http://test.com/users/nicknames
+// http://test.com/users/bob/frank
+// http://test.com/users/bob/frank
+// http://test.com/users/bob/frank/nicknames
+func AppendPath(elements ...string) Option {
+	return OptionFunc(func(r *Requester) error {
+
+		if len(elements) == 0 {
+			return nil
+		}
+
+		var basePath string
+		if r.URL != nil {
+			basePath = r.URL.EscapedPath()
+		}
+
+		// keep track of whether the last element in the set we're
+		// joining has a trailing slash.  If so, we'll keep a trailing
+		// slash on the final, joined path
+		trailingSlash := strings.HasSuffix(basePath, "/")
+
+		// strip leading/trailing slashes, and remove empty strings
+		els := elements[:0]
+
+		for _, e := range elements {
+			trailingSlash = strings.HasSuffix(e, "/")
+			e = strings.TrimFunc(e, func(r rune) bool {
+				return unicode.IsSpace(r) || r == rune('/')
+			})
+			if len(e) > 0 {
+				els = append(els, e)
+			}
+		}
+
+		// prepend the current base url on the slice, stripping the
+		// trailing slash if present
+		els = append(els, "")
+		copy(els[1:], els)
+		els[0] = strings.TrimSuffix(basePath, "/")
+
+		// join elements back together into new path
+		newPath := strings.Join(els, "/")
+
+		// re-add the trailing slash if necessary
+		if trailingSlash {
+			newPath += "/"
+		}
+		return RelativeURL(newPath).Apply(r)
 	})
 }
 

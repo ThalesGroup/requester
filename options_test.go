@@ -145,6 +145,102 @@ func TestRelativeURL(t *testing.T) {
 	})
 }
 
+func TestAppendPath(t *testing.T) {
+
+	cases := []struct {
+		name   string
+		in     *Requester
+		out    string
+		append []string
+	}{
+		{
+			name:   "basic",
+			in:     MustNew(URL("")),
+			append: []string{"blue", "green"},
+			out:    "/blue/green",
+		},
+		{
+			name:   "append",
+			in:     MustNew(URL("/red")),
+			append: []string{"blue", "green"},
+			out:    "/red/blue/green",
+		},
+		{
+			name:   "nil url",
+			in:     &Requester{},
+			append: []string{"blue", "green"},
+			out:    "/blue/green",
+		},
+		{
+			name:   "strip empty elements",
+			in:     &Requester{},
+			append: []string{"blue", "//", "/", "", "  ", " / / / ", "green"},
+			out:    "/blue/green",
+		},
+		{
+			name:   "strip slashes",
+			in:     &Requester{},
+			append: []string{"/blue/", "/green"},
+			out:    "/blue/green",
+		},
+		{
+			name:   "one",
+			in:     &Requester{},
+			append: []string{"blue"},
+			out:    "/blue",
+		},
+		{
+			name:   "three",
+			in:     &Requester{},
+			append: []string{"blue", "green", "red"},
+			out:    "/blue/green/red",
+		},
+		{
+			name:   "none",
+			in:     MustNew(URL("/blue")),
+			append: []string{},
+			out:    "/blue",
+		},
+		{
+			name:   "preserve trailing slash",
+			in:     &Requester{},
+			append: []string{"blue", "green/"},
+			out:    "/blue/green/",
+		},
+		{
+			name:   "add trailing slash",
+			in:     &Requester{},
+			append: []string{"blue", "green", "/"},
+			out:    "/blue/green/",
+		},
+		{
+			name:   "base trailing slash",
+			in:     MustNew(URL("/blue/")),
+			append: []string{},
+			out:    "/blue/",
+		},
+		{
+			name:   "preserve inner trailing slash",
+			in:     MustNew(URL("/blue/")),
+			append: []string{"green/red", "yellow"},
+			out:    "/blue/green/red/yellow",
+		},
+		{
+			name:   "preserve encoded stuff",
+			in:     MustNew(URL("/blue/")),
+			append: []string{url.PathEscape("green/red "), "yellow"},
+			out:    "/blue/green%2Fred%20/yellow",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := tc.in.MustWith(AppendPath(tc.append...)).URL.String()
+			assert.Equal(t, tc.out, s)
+		})
+	}
+}
+
 func TestMethod(t *testing.T) {
 	cases := []struct {
 		options        []Option
