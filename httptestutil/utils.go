@@ -6,9 +6,7 @@ package httptestutil
 
 import (
 	"github.com/gemalto/requester"
-	"io"
 	"net/http/httptest"
-	"os"
 )
 
 // Requester creates a Requester instance which is pre-configured to send requests to
@@ -34,32 +32,3 @@ func Inspect(ts *httptest.Server) *Inspector {
 	return i
 }
 
-// Dump writes requests and responses to the writer.
-func Dump(ts *httptest.Server, to io.Writer) {
-	ts.Config.Handler = DumpTo(ts.Config.Handler, to)
-}
-
-// DumpToStdout writes requests and responses to os.Stdout.
-func DumpToStdout(ts *httptest.Server) {
-	Dump(ts, os.Stdout)
-}
-
-type logFunc func(a ...interface{})
-
-// Write implements io.Writer.
-func (f logFunc) Write(p []byte) (n int, err error) {
-	f(string(p))
-	return len(p), nil
-}
-
-// DumpToLog writes requests and responses to a logging function.  The function
-// signature is the same as testing.T.Log, so it can be used to pipe
-// traffic to the test log:
-//
-//     func TestHandler(t *testing.T) {
-//         ...
-//         DumpToLog(ts, t.Log)
-//
-func DumpToLog(ts *httptest.Server, logf func(a ...interface{})) {
-	Dump(ts, logFunc(logf))
-}

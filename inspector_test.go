@@ -58,6 +58,10 @@ func TestInspector_Clear(t *testing.T) {
 	assert.Nil(t, i.Response)
 	assert.Nil(t, i.RequestBody)
 	assert.Nil(t, i.ResponseBody)
+
+	assert.NotPanics(t, func() {
+		(*Inspector)(nil).Clear()
+	})
 }
 
 func TestInspect(t *testing.T) {

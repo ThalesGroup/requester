@@ -6,10 +6,12 @@ import (
 	"github.com/ansel1/merry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
+	"os"
 	"testing"
 )
 
@@ -54,6 +56,70 @@ func TestDumpToLog(t *testing.T) {
 	assert.Contains(t, reqLog, "GET / HTTP/1.1")
 	assert.Contains(t, respLog, "HTTP/1.1 200 OK")
 	assert.Contains(t, respLog, `{"color":"red"}`)
+}
+
+func TestDumpToStout(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"color":"red"}`))
+	}))
+	defer ts.Close()
+
+	old := os.Stdout // keep backup of the real stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	defer func() {os.Stdout = old}()
+
+	outC := make(chan string)
+	// copy the output in a separate goroutine so printing can't block indefinitely
+	go func() {
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+		outC <- buf.String()
+	}()
+
+	Receive(Get(ts.URL), DumpToStout())
+
+	// back to normal state
+	os.Stdout = old // restoring the real stdout
+	w.Close()
+	out := <-outC
+
+	assert.Contains(t, out, "GET / HTTP/1.1")
+	assert.Contains(t, out, "HTTP/1.1 200 OK")
+	assert.Contains(t, out, `{"color":"red"}`)
+}
+
+func TestDumpToSterr(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"color":"red"}`))
+	}))
+	defer ts.Close()
+
+	old := os.Stderr // keep backup of the real stdout
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+	defer func() { os.Stderr = old }()
+
+	outC := make(chan string)
+	// copy the output in a separate goroutine so printing can't block indefinitely
+	go func() {
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+		outC <- buf.String()
+	}()
+
+	Receive(Get(ts.URL), DumpToStderr())
+
+	// back to normal state
+	os.Stderr = old // restoring the real stdout
+	w.Close()
+	out := <-outC
+
+	assert.Contains(t, out, "GET / HTTP/1.1")
+	assert.Contains(t, out, "HTTP/1.1 200 OK")
+	assert.Contains(t, out, `{"color":"red"}`)
 }
 
 func TestExpectCode(t *testing.T) {

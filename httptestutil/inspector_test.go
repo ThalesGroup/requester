@@ -142,6 +142,14 @@ func TestInspector_Clear(t *testing.T) {
 	is.Clear()
 
 	require.Empty(t, is.Exchanges)
+
+	t.Run("nil", func(t *testing.T) {
+		var i *Inspector
+		assert.NotPanics(t, func() {
+			i.Clear()
+		})
+
+	})
 }
 
 func TestInspector_readFrom(t *testing.T) {

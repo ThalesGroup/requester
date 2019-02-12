@@ -150,6 +150,25 @@ func TestFormMarshaler_Marshal(t *testing.T) {
 	//assert.Equal(t, "color=red&count=30", string(d))
 }
 
+func TestMarshalFunc_Apply(t *testing.T) {
+	var mf MarshalFunc = func(v interface{}) (bytes []byte, s string, e error) {
+		return nil, "red", nil
+	}
+
+	_, s, _ := MustNew(mf).Marshaler.Marshal(nil)
+	assert.Equal(t, "red", s)
+}
+
+func TestMultiUnmarshaler_Apply(t *testing.T) {
+	r := MustNew()
+	r.Marshaler = nil
+
+	m := &MultiUnmarshaler{}
+	r.MustApply(m)
+
+	assert.Equal(t, m, r.Unmarshaler)
+}
+
 func ExampleFormMarshaler() {
 	// *FormMarshaler implements Option, so it can be passed directly to functions
 	// which accept Options.

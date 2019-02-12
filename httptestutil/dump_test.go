@@ -18,7 +18,8 @@ func TestDumpToStdout(t *testing.T) {
 
 	DumpToStdout(ts)
 
-	Requester(ts).Receive(requester.Get("/test"), requester.Body("ping"))
+	_, _, err := Requester(ts).Receive(requester.Get("/test"), requester.Body("ping"))
+	require.NoError(t, err)
 }
 
 func TestDump(t *testing.T) {

@@ -246,22 +246,11 @@ func RelativeURL(paths ...string) Option {
 //
 // For example:
 //
-//     r := requester.MustNew(requester.URL("http://test.com/users/bob"))
-//	   fmt.Println(r.MustWith(requester.RelativeURL("frank")).URL.String())
-//	   fmt.Println(r.MustWith(requester.RelativeURL("/frank")).URL.String())
-//	   fmt.Println(r.MustWith(requester.RelativeURL("frank","nicknames")).URL.String())
+//     baseURL = http://test.com/users/bob
+//     + RelativeURL(frank) = http://test.com/users/frank
+//     + AppendPath(frank)  = http://test.com/users/bob/frank
 //
-//	   fmt.Println(r.MustWith(appendPath("frank")).URL.String())
-//	   fmt.Println(r.MustWith(appendPath("/frank")).URL.String())
-//	   fmt.Println(r.MustWith(appendPath("frank","nicknames")).URL.String())
-//
-// output:
-// http://test.com/users/frank
-// http://test.com/frank
-// http://test.com/users/nicknames
-// http://test.com/users/bob/frank
-// http://test.com/users/bob/frank
-// http://test.com/users/bob/frank/nicknames
+// See ExampleAppendPath for more examples.
 func AppendPath(elements ...string) Option {
 	return OptionFunc(func(r *Requester) error {
 

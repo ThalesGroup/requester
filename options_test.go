@@ -326,6 +326,18 @@ func TestBasicAuth(t *testing.T) {
 			require.Equal(t, c.expectedAuth, auth)
 		})
 	}
+
+	t.Run("delete header", func(t *testing.T) {
+		r := MustNew(BasicAuth("bob", "red"))
+
+		// assert the authorization header is set
+		assert.NotEmpty(t, r.Header.Get(HeaderAuthorization))
+
+		// applying the option with empty values deletes the header
+		r.MustApply(BasicAuth("", ""))
+		assert.Empty(t, r.Header.Get(HeaderAuthorization))
+
+	})
 }
 
 func TestBearerAuth(t *testing.T) {
@@ -410,18 +422,21 @@ func TestQueryParams(t *testing.T) {
 }
 
 func TestQueryParam(t *testing.T) {
-	reqs, err := New(QueryParam("color", "red"))
-	require.NoError(t, err)
+	reqs := MustNew(QueryParam("color", "red"))
 
 	expected := url.Values{}
 	expected.Add("color", "red")
 	require.Equal(t, expected, reqs.QueryParams)
 
-	err = reqs.Apply(QueryParam("color", "blue"))
-	require.NoError(t, err)
+	reqs.MustApply(QueryParam("color", "blue"))
 
 	expected.Add("color", "blue")
 	require.Equal(t, expected, reqs.QueryParams)
+
+	t.Run("empty key", func(t *testing.T) {
+		// if key arg is empty, it's a no op
+		assert.Nil(t, MustNew(QueryParam("", "red")).Header)
+	})
 }
 
 func TestBody(t *testing.T) {
@@ -486,6 +501,30 @@ func TestForm(t *testing.T) {
 	reqs, err := New(Form())
 	require.NoError(t, err)
 	assert.IsType(t, &FormMarshaler{}, reqs.Marshaler)
+}
+
+func TestUse(t *testing.T) {
+
+	var outputs []string
+
+	var mw Middleware = func(next Doer) Doer {
+		outputs = append(outputs, "one")
+		return next
+	}
+	var mw2 Middleware = func(next Doer) Doer {
+		outputs = append(outputs, "two")
+		return next
+	}
+	r := MustNew(Use(mw, mw2), MockDoer(200))
+	r.Receive(nil)
+
+	assert.Equal(t, []string{"two","one"}, outputs)
+	outputs = []string{}
+
+	r.MustApply(Use(mw))
+	r.Receive(nil)
+
+	assert.Equal(t, []string{"one","two", "one"}, outputs)
 }
 
 func ExampleAccept() {
@@ -707,6 +746,28 @@ func ExampleRelativeURL() {
 	fmt.Println(r.URL.String())
 
 	// Output: http://test.com/green/red/blue
+}
+
+func ExampleAppendPath() {
+
+	r := MustNew(URL("http://test.com/users/bob"))
+
+	fmt.Println("RelativeURL: " + r.MustWith(RelativeURL("frank")).URL.String())
+	fmt.Println("AppendPath:  " + r.MustWith(AppendPath("frank")).URL.String())
+
+	fmt.Println("RelativeURL: " + r.MustWith(RelativeURL("/frank")).URL.String())
+	fmt.Println("AppendPath:  " + r.MustWith(AppendPath("/frank")).URL.String())
+
+	fmt.Println("RelativeURL: " + r.MustWith(RelativeURL("frank", "nicknames")).URL.String())
+	fmt.Println("AppendPath:  " + r.MustWith(AppendPath("frank", "nicknames")).URL.String())
+
+	// Output:
+	// RelativeURL: http://test.com/users/frank
+	// AppendPath:  http://test.com/users/bob/frank
+	// RelativeURL: http://test.com/frank
+	// AppendPath:  http://test.com/users/bob/frank
+	// RelativeURL: http://test.com/users/nicknames
+	// AppendPath:  http://test.com/users/bob/frank/nicknames
 }
 
 func ExampleRequester_Clone() {
