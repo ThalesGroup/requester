@@ -1,5 +1,5 @@
 # Requester
-[![GoDoc](https://godoc.org/github.com/gemalto/requester?status.png)](https://godoc.org/github.com/gemalto/requester) [![Go Report Card](https://goreportcard.com/badge/github.com/gemalto/requester)](https://goreportcard.com/report/github.com/gemalto/requester)
+[![GoDoc](https://godoc.org/github.com/gemalto/requester?status.png)](https://godoc.org/github.com/gemalto/requester) [![Go Report Card](https://goreportcard.com/badge/github.com/gemalto/requester)](https://goreportcard.com/report/github.com/gemalto/requester) [![Build](https://github.com/gemalto/requester/workflows/Build/badge.svg)](https://github.com/gemalto/requester/actions?query=branch%3Amaster+workflow%3ABuild+)
 
 A.K.A "Yet Another Golang Requests Package"
 
