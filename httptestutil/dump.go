@@ -24,9 +24,9 @@ func DumpTo(handler http.Handler, writer io.Writer) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		dump, err := httputil.DumpRequest(r, true)
 		if err != nil {
-			fmt.Fprintf(writer, "error dumping request: %#v", err)
+			_, _ = fmt.Fprintf(writer, "error dumping request: %#v", err)
 		} else {
-			writer.Write(append(dump, []byte("\r\n")...))
+			_, _ = writer.Write(append(dump, []byte("\r\n")...))
 		}
 
 		ex := Exchange{}
@@ -48,9 +48,9 @@ func DumpTo(handler http.Handler, writer io.Writer) http.Handler {
 
 		d, err := httputil.DumpResponse(&resp, true)
 		if err != nil {
-			fmt.Fprintf(writer, "error dumping response: %#v", err)
+			_, _ = fmt.Fprintf(writer, "error dumping response: %#v", err)
 		} else {
-			writer.Write(append(d, []byte("\r\n")...))
+			_, _ = writer.Write(append(d, []byte("\r\n")...))
 		}
 	})
 }

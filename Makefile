@@ -16,13 +16,14 @@ fmt:
 	go fmt $(PACKAGES)
 
 lint:
-	golint -set_exit_status $(PACKAGES)
+	golangci-lint run
 
 vet:
 	go vet $(PACKAGES)
 
 tools:
-	go get -u github.com/golang/lint/golint
+#	go get -u github.com/golang/lint/golint
+	sh -c "$$(wget -O - -q https://install.goreleaser.com/github.com/golangci/golangci-lint.sh || echo exit 2)" -- -b $(shell go env GOPATH)/bin $(GOLANGCI_LINT_VERSION)
 
 ensure:
 	dep ensure

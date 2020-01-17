@@ -407,7 +407,7 @@ func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts .
 
 		err = unmarshaler.Unmarshal(body, resp.Header.Get("Content-Type"), into)
 	}
-	return
+	return resp, body, err
 }
 
 func readBody(resp *http.Response) ([]byte, error) {

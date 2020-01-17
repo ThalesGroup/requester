@@ -36,17 +36,17 @@ func Dump(w io.Writer) Middleware {
 			// So if this is being redirected to a logger, it's all sent in a single
 			// package
 			if dumperr != nil {
-				io.WriteString(w, "Error dumping request: "+dumperr.Error()+"\n")
+				_, _ = io.WriteString(w, "Error dumping request: "+dumperr.Error()+"\n")
 			} else {
-				io.WriteString(w, string(dump)+"\n")
+				_, _ = io.WriteString(w, string(dump)+"\n")
 			}
 			resp, err := next.Do(req)
 			if resp != nil {
 				dump, dumperr = httputil.DumpResponse(resp, true)
 				if dumperr != nil {
-					io.WriteString(w, "Error dumping response: "+dumperr.Error()+"\n")
+					_, _ = io.WriteString(w, "Error dumping response: "+dumperr.Error()+"\n")
 				} else {
-					io.WriteString(w, string(dump)+"\n")
+					_, _ = io.WriteString(w, string(dump)+"\n")
 				}
 			}
 			return resp, err

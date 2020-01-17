@@ -23,9 +23,11 @@ import (
 // determine which unmarshaler to delegate it.  It supports JSON and XML.
 
 // DefaultMarshaler is used by Requester if Requester.Marshaler is nil.
+// nolint:gochecknoglobals
 var DefaultMarshaler Marshaler = &JSONMarshaler{}
 
 // DefaultUnmarshaler is used by Requester if Requester.Unmarshaler is nil.
+// nolint:gochecknoglobals
 var DefaultUnmarshaler Unmarshaler = &MultiUnmarshaler{}
 
 const (

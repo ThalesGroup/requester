@@ -81,7 +81,7 @@ func MockHandler(statusCode int, options ...Option) http.Handler {
 
 		writer.WriteHeader(statusCode)
 
-		io.Copy(writer, req.Body)
+		_, _ = io.Copy(writer, req.Body)
 	})
 }
 
@@ -100,6 +100,6 @@ func ChannelHandler() (chan<- *http.Response, http.Handler) {
 
 		writer.WriteHeader(resp.StatusCode)
 
-		io.Copy(writer, resp.Body)
+		_, _ = io.Copy(writer, resp.Body)
 	})
 }

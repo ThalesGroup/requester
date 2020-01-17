@@ -158,7 +158,7 @@ func TestExpectCode(t *testing.T) {
 	require.NoError(t, err)
 
 	// original requester's expect option should be unmodified
-	resp, body, err = r.Receive(nil)
+	_, _, err = r.Receive(nil)
 	// but an error should be returned too
 	require.Error(t, err)
 	require.Equal(t, 407, merry.HTTPCode(err))
