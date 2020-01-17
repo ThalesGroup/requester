@@ -1,6 +1,6 @@
 PACKAGES = $$(go list ./...)
 
-all: tools ensure fmt vet lint test
+all: tools ensure fmt lint test
 
 test:
 	go test $(PACKAGES)
@@ -16,6 +16,7 @@ fmt:
 	go fmt $(PACKAGES)
 
 lint:
+	-golangci-lint run
 	golangci-lint run
 
 vet:
