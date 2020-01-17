@@ -68,7 +68,7 @@ func TestDumpToStout(t *testing.T) {
 	old := os.Stdout // keep backup of the real stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
-	defer func() {os.Stdout = old}()
+	defer func() { os.Stdout = old }()
 
 	outC := make(chan string)
 	// copy the output in a separate goroutine so printing can't block indefinitely
@@ -130,13 +130,20 @@ func TestExpectCode(t *testing.T) {
 	}))
 	defer ts.Close()
 
+	r, err := New(Get(ts.URL))
+	require.NoError(t, err)
+
 	// without middleware
-	resp, body, err := Receive(Get(ts.URL))
+	resp, body, err := r.Receive(nil)
 	require.NoError(t, err)
 	require.Equal(t, 407, resp.StatusCode)
 	require.Equal(t, "boom!", string(body))
 
-	resp, body, err = Receive(Get(ts.URL), ExpectCode(203))
+	// add expect option
+	r, err = r.With(ExpectCode(203))
+	require.NoError(t, err)
+
+	resp, body, err = r.Receive(nil)
 	// body and response should still be returned
 	assert.Equal(t, 407, resp.StatusCode)
 	assert.Equal(t, "boom!", string(body))
@@ -145,6 +152,16 @@ func TestExpectCode(t *testing.T) {
 	assert.Contains(t, err.Error(), "expected: 203")
 	assert.Contains(t, err.Error(), "received: 407")
 	assert.Equal(t, 407, merry.HTTPCode(err))
+
+	// Using the option twice: latest option should win
+	_, _, err = r.Receive(ExpectCode(407))
+	require.NoError(t, err)
+
+	// original requester's expect option should be unmodified
+	resp, body, err = r.Receive(nil)
+	// but an error should be returned too
+	require.Error(t, err)
+	require.Equal(t, 407, merry.HTTPCode(err))
 
 }
 

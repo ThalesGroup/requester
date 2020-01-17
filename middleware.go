@@ -1,6 +1,7 @@
 package requester
 
 import (
+	"context"
 	"github.com/ansel1/merry"
 	"io"
 	"net/http"
@@ -88,13 +89,10 @@ func DumpToLog(logf func(a ...interface{})) Middleware {
 func ExpectCode(code int) Middleware {
 	return func(next Doer) Doer {
 		return DoerFunc(func(req *http.Request) (*http.Response, error) {
-			resp, err := next.Do(req)
-			if err == nil && resp != nil && resp.StatusCode != code {
-				err := merry.Errorf("server returned unexpected status code.  expected: %d, received: %d", code, resp.StatusCode)
-				err = err.WithHTTPCode(resp.StatusCode)
-				return resp, err
-			}
-			return resp, err
+			r, c := getCodeChecker(req)
+			c.code = code
+			resp, err := next.Do(r)
+			return c.checkCode(resp, err)
 		})
 	}
 }
@@ -106,13 +104,46 @@ func ExpectCode(code int) Middleware {
 func ExpectSuccessCode() Middleware {
 	return func(next Doer) Doer {
 		return DoerFunc(func(req *http.Request) (*http.Response, error) {
-			resp, err := next.Do(req)
-			if err == nil && resp != nil && (resp.StatusCode < 200 || resp.StatusCode > 299) {
-				err := merry.Errorf("server returned an unsuccessful status code: %d", resp.StatusCode)
-				err = err.WithHTTPCode(resp.StatusCode)
-				return resp, err
-			}
-			return resp, err
+			r, c := getCodeChecker(req)
+			c.code = expectSuccessCode
+			resp, err := next.Do(r)
+			return c.checkCode(resp, err)
 		})
 	}
+}
+
+type ctxKey int
+
+const expectCodeCtxKey ctxKey = iota
+
+const expectSuccessCode = -1
+
+type codeChecker struct {
+	code int
+}
+
+func (c *codeChecker) checkCode(resp *http.Response, err error) (*http.Response, error) {
+	if err != nil || resp == nil {
+		return resp, err
+	}
+	if c.code == expectSuccessCode && (resp.StatusCode < 200 || resp.StatusCode > 299) { // special case, expect a success code
+		err := merry.Errorf("server returned an unsuccessful status code: %d", resp.StatusCode)
+		err = err.WithHTTPCode(resp.StatusCode)
+		return resp, err
+	}
+	if c.code != resp.StatusCode {
+		err := merry.Errorf("server returned unexpected status code.  expected: %d, received: %d", c.code, resp.StatusCode)
+		err = err.WithHTTPCode(resp.StatusCode)
+		return resp, err
+	}
+	return resp, nil
+}
+
+func getCodeChecker(req *http.Request) (*http.Request, *codeChecker) {
+	c, _ := req.Context().Value(expectCodeCtxKey).(*codeChecker)
+	if c == nil {
+		c = &codeChecker{}
+		req = req.WithContext(context.WithValue(req.Context(), expectCodeCtxKey, c))
+	}
+	return req, c
 }

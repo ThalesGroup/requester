@@ -518,13 +518,13 @@ func TestUse(t *testing.T) {
 	r := MustNew(Use(mw, mw2), MockDoer(200))
 	r.Receive(nil)
 
-	assert.Equal(t, []string{"two","one"}, outputs)
+	assert.Equal(t, []string{"two", "one"}, outputs)
 	outputs = []string{}
 
 	r.MustApply(Use(mw))
 	r.Receive(nil)
 
-	assert.Equal(t, []string{"one","two", "one"}, outputs)
+	assert.Equal(t, []string{"one", "two", "one"}, outputs)
 }
 
 func ExampleAccept() {

@@ -31,4 +31,3 @@ func Inspect(ts *httptest.Server) *Inspector {
 
 	return i
 }
-
