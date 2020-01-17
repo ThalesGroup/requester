@@ -33,6 +33,12 @@ jobs:
 
     - name: Build
       working-directory: go/src/github.com/gemalto/requester
-      run: make
+      run: |
+        mkdir -p $GOPATH/bin
+        echo 'export PATH=$PATH:$GOPATH/bin' > runme.sh
+        echo 'make' >> runme.sh
+        chmod +x runme.sh
+        ./runme.sh
       env:
         GOPATH: /home/runner/work/requester/requester/go
+    
