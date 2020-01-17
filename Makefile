@@ -16,6 +16,7 @@ fmt:
 	go fmt $(PACKAGES)
 
 lint:
+	-golangci-lint run
 	golangci-lint run
 
 vet:
