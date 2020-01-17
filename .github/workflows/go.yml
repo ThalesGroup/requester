@@ -12,6 +12,9 @@ jobs:
       with:
         go-version: 1.13
       id: go
+    
+    - name: Install dep
+      run: sudo apt-get install go-dep
 
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
