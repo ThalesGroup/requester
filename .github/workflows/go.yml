@@ -1,4 +1,4 @@
-name: Go
+name: Build
 on: [push]
 jobs:
 
@@ -29,10 +29,10 @@ jobs:
         echo ${GOPATH}
         echo ${GOROOT}
       env:
-        GOPATH: /home/runner/work/requester/go
+        GOPATH: ${GITHUB_WORKSPACE}/go
 
     - name: Build
       working-directory: go/src/github.com/gemalto/requester
       run: make
       env:
-        GOPATH: /home/runner/work/requester/go
+        GOPATH: ${GITHUB_WORKSPACE}/go
