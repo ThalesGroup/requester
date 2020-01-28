@@ -15,8 +15,13 @@ coverage: build
 fmt:
 	go fmt $(PACKAGES)
 
+
 lint:
-	-golangci-lint run
+	# running golangci-lint run twice, ignoring the first run
+	# this is to workaround a bug in golangci-lint's type cache which can result
+	# in false type errors on the first run
+	# https://github.com/golangci/golangci-lint/issues/885
+	-golangci-lint run > /dev/null 2>&1
 	golangci-lint run
 
 vet:

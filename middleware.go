@@ -123,20 +123,20 @@ type codeChecker struct {
 }
 
 func (c *codeChecker) checkCode(resp *http.Response, err error) (*http.Response, error) {
-	if err != nil || resp == nil {
-		return resp, err
+	switch {
+	case err != nil, resp == nil:
+	case c.code == expectSuccessCode:
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			err = merry.
+				Errorf("server returned an unsuccessful status code: %d", resp.StatusCode).
+				WithHTTPCode(resp.StatusCode)
+		}
+	case c.code != resp.StatusCode:
+		err = merry.
+			Errorf("server returned unexpected status code.  expected: %d, received: %d", c.code, resp.StatusCode).
+			WithHTTPCode(resp.StatusCode)
 	}
-	if c.code == expectSuccessCode && (resp.StatusCode < 200 || resp.StatusCode > 299) { // special case, expect a success code
-		err := merry.Errorf("server returned an unsuccessful status code: %d", resp.StatusCode)
-		err = err.WithHTTPCode(resp.StatusCode)
-		return resp, err
-	}
-	if c.code != resp.StatusCode {
-		err := merry.Errorf("server returned unexpected status code.  expected: %d, received: %d", c.code, resp.StatusCode)
-		err = err.WithHTTPCode(resp.StatusCode)
-		return resp, err
-	}
-	return resp, nil
+	return resp, err
 }
 
 func getCodeChecker(req *http.Request) (*http.Request, *codeChecker) {

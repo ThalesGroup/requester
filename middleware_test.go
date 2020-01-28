@@ -167,9 +167,11 @@ func TestExpectCode(t *testing.T) {
 
 func TestExpectSuccessCode(t *testing.T) {
 
+	codeToReturn := 407
+	bodyToReturn := "boom!"
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(407)
-		w.Write([]byte("boom!"))
+		w.WriteHeader(codeToReturn)
+		_, _ = w.Write([]byte(bodyToReturn))
 	}))
 	defer ts.Close()
 
@@ -187,6 +189,14 @@ func TestExpectSuccessCode(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "code: 407")
 	assert.Equal(t, 407, merry.HTTPCode(err))
+
+	// test positive path: if success code is returned, then no error should be returned
+	successCodes := []int{200, 201, 204, 278}
+	for _, code := range successCodes {
+		codeToReturn = code
+		_, _, err := Receive(Get(ts.URL), ExpectSuccessCode())
+		require.NoError(t, err, "should not have received an error for code %v", code)
+	}
 }
 
 func ExampleMiddleware() {
