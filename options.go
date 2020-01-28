@@ -113,37 +113,37 @@ func Method(m string, paths ...string) Option {
 // Head sets the HTTP method to "HEAD".  Optional path arguments
 // will be applied via the RelativeURL option.
 func Head(paths ...string) Option {
-	return Method("HEAD", paths...)
+	return Method(http.MethodHead, paths...)
 }
 
 // Get sets the HTTP method to "GET".  Optional path arguments
 // will be applied via the RelativeURL option.
 func Get(paths ...string) Option {
-	return Method("GET", paths...)
+	return Method(http.MethodGet, paths...)
 }
 
 // Post sets the HTTP method to "POST".  Optional path arguments
 // will be applied via the RelativeURL option.
 func Post(paths ...string) Option {
-	return Method("POST", paths...)
+	return Method(http.MethodPost, paths...)
 }
 
 // Put sets the HTTP method to "PUT".  Optional path arguments
 // will be applied via the RelativeURL option.
 func Put(paths ...string) Option {
-	return Method("PUT", paths...)
+	return Method(http.MethodPut, paths...)
 }
 
 // Patch sets the HTTP method to "PATCH".  Optional path arguments
 // will be applied via the RelativeURL option.
 func Patch(paths ...string) Option {
-	return Method("PATCH", paths...)
+	return Method(http.MethodPatch, paths...)
 }
 
 // Delete sets the HTTP method to "DELETE".  Optional path arguments
 // will be applied via the RelativeURL option.
 func Delete(paths ...string) Option {
-	return Method("DELETE", paths...)
+	return Method(http.MethodDelete, paths...)
 }
 
 // AddHeader adds a header value, using Header.Add()
