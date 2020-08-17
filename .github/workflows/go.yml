@@ -33,11 +33,10 @@ jobs:
         GOPATH: /home/runner/work/go
 
     - name: Build
-      working-directory: go/src/github.com/gemalto/requester
       run: |
         mkdir -p $GOPATH/bin
         echo 'export PATH=$PATH:$GOPATH/bin' > runme.sh
-        echo 'make' >> runme.sh
+        echo 'make tools all' >> runme.sh
         chmod +x runme.sh
         ./runme.sh
       env:
