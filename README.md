@@ -136,3 +136,12 @@ to this library.
 Also, making the options into objects improved ergonomics in a few places, like mirroring 
 the main functions (`Request()`, `Send()`, `Receive()`) on the struct and the package.  Options can be passed
 around as arguments or accumulated in slices.
+
+Contributing
+------------
+
+To build, be sure to have a recent go SDK, and make.  Run `make tools` to install other dependencies.  Run `make` 
+to build.
+
+Merge requests are welcome!  Before submitting, please run `make` and make sure all tests pass and there are
+no linter findings.
