@@ -1,5 +1,11 @@
 name: Build
-on: [push]
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
 jobs:
 
   build:
@@ -7,20 +13,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-    - name: Set up Go 1.13
-      uses: actions/setup-go@v1
+    - name: Set up Go 1.14
+      uses: actions/setup-go@v2
       with:
-        go-version: 1.13
+        go-version: ^1.14
       id: go
     
-    - name: Install dep
-      run: sudo apt-get install go-dep
-
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
-      with:
-        path: go/src/github.com/gemalto/requester
-        
+
     - name: Debug
       run: |
         pwd
@@ -29,7 +30,7 @@ jobs:
         echo ${GOPATH}
         echo ${GOROOT}
       env:
-        GOPATH: /home/runner/work/requester/requester/go
+        GOPATH: /home/runner/work/go
 
     - name: Build
       working-directory: go/src/github.com/gemalto/requester
@@ -40,5 +41,5 @@ jobs:
         chmod +x runme.sh
         ./runme.sh
       env:
-        GOPATH: /home/runner/work/requester/requester/go
+        GOPATH: /home/runner/work/go
     
