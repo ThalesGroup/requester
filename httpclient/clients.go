@@ -121,7 +121,9 @@ type TLSOption func(c *tls.Config) error
 func (f TLSOption) Apply(c *http.Client) error {
 	return TransportOption(func(t *http.Transport) error {
 		if t.TLSClientConfig == nil {
-			t.TLSClientConfig = &tls.Config{}
+			t.TLSClientConfig = &tls.Config{
+				MinVersion: tls.VersionTLS12,
+			}
 		}
 		return f(t.TLSClientConfig)
 	}).Apply(c)
