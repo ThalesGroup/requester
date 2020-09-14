@@ -142,12 +142,12 @@ func TestFormMarshaler_Marshal(t *testing.T) {
 		assert.Equal(t, testCase.output, string(d))
 	}
 
-	//m := FormMarshaler{}
-	//d, ct, err := m.Marshal(testModel{"red", 30})
-	//require.NoError(t, err)
+	// m := FormMarshaler{}
+	// d, ct, err := m.Marshal(testModel{"red", 30})
+	// require.NoError(t, err)
 	//
-	//assert.Equal(t, "application/x-www-form-urlencoded", ct)
-	//assert.Equal(t, "color=red&count=30", string(d))
+	// assert.Equal(t, "application/x-www-form-urlencoded", ct)
+	// assert.Equal(t, "color=red&count=30", string(d))
 }
 
 func TestMarshalFunc_Apply(t *testing.T) {

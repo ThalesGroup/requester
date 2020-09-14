@@ -70,11 +70,9 @@ import (
 //     req, err        := reqs.RequestContext(ctx)
 //
 type Requester struct {
-	////////////////////////////////////////////////////////////////
-	//                                                            //
-	//  Attributes affecting the construction of http.Requester.   //
-	//                                                            //
-	////////////////////////////////////////////////////////////////
+
+	//  Attributes affecting the construction of http.Requester.
+	//  --------------------------------------------------------
 
 	// Method defaults to "GET".
 	Method string
@@ -115,12 +113,9 @@ type Requester struct {
 	// Marshaler will supply an appropriate one.
 	Marshaler Marshaler
 
-	//////////////////////////////////////////////////////////////
-	//
 	//  Attributes related to sending requester and handling
 	//  responses.
-	//
-	////////////////////////////////////////////////////////////////
+	//  -----------------------------------------------------
 
 	// Doer holds the HTTP client for used to execute requester.
 	// Defaults to http.DefaultClient.
