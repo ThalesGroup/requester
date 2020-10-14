@@ -31,7 +31,7 @@ Receive will attempt to unmarshal the body into the target value.
 	var res Resource
 
 	resp, body, err := requester.Receive(&res,
-		requester.Get("http://api.com/resources/1",
+		requester.Get("http://api.com/resources/1"),
 	)
 
 	fmt.Println(body)      // {"color":"red"}
