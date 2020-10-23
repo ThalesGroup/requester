@@ -5,7 +5,7 @@
 package httptestutil
 
 import (
-	"github.com/gemalto/requester"
+	"github.com/ThalesGroup/requester"
 	"net/http/httptest"
 )
 

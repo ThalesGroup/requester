@@ -127,14 +127,14 @@ HTTP Client Options
 
 The HTTP client used to execute requests can also be customized with Options:
 
-	import "github.com/gemalto/requester/httpclient"
+	import "github.com/ThalesGroup/requester/httpclient"
 
 	requester.Send(
 		requester.Get("https://api.com"),
 		requester.Client(httpclient.SkipVerify()),
 	)
 
-"github.com/gemalto/requester/httpclient" is a standalone package for constructing and configuring
+"github.com/ThalesGroup/requester/httpclient" is a standalone package for constructing and configuring
 http.Clients.  The requester.Client(...httpclient.Option) option constructs a new HTTP client
 and installs it into Requester.Doer.
 

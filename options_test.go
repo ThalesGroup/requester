@@ -3,7 +3,7 @@ package requester
 import (
 	"context"
 	"fmt"
-	"github.com/gemalto/requester/httpclient"
+	"github.com/ThalesGroup/requester/httpclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"

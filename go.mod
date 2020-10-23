@@ -1,4 +1,4 @@
-module github.com/gemalto/requester
+module github.com/ThalesGroup/requester
 
 go 1.14
 

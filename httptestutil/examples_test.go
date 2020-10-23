@@ -2,8 +2,8 @@ package httptestutil_test
 
 import (
 	"fmt"
-	"github.com/gemalto/requester"
-	"github.com/gemalto/requester/httptestutil"
+	"github.com/ThalesGroup/requester"
+	"github.com/ThalesGroup/requester/httptestutil"
 	"net/http"
 	"net/http/httptest"
 	"strconv"

@@ -8,7 +8,7 @@ import (
 	"unicode"
 
 	"github.com/ansel1/merry"
-	"github.com/gemalto/requester/httpclient"
+	"github.com/ThalesGroup/requester/httpclient"
 	goquery "github.com/google/go-querystring/query"
 )
 

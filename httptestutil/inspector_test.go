@@ -2,7 +2,7 @@ package httptestutil
 
 import (
 	"fmt"
-	"github.com/gemalto/requester"
+	"github.com/ThalesGroup/requester"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
