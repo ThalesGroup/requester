@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"github.com/ansel1/merry"
 	goquery "github.com/google/go-querystring/query"
+	"mime"
 	"net/url"
 	"strings"
 )
@@ -28,7 +29,7 @@ var DefaultMarshaler Marshaler = &JSONMarshaler{}
 
 // DefaultUnmarshaler is used by Requester if Requester.Unmarshaler is nil.
 // nolint:gochecknoglobals
-var DefaultUnmarshaler Unmarshaler = &MultiUnmarshaler{}
+var DefaultUnmarshaler Unmarshaler = NewContentTypeUnmarshaler()
 
 const (
 	contentTypeForm = MediaTypeForm + "; charset=UTF-8"
@@ -179,29 +180,95 @@ func (m *FormMarshaler) Apply(r *Requester) error {
 	return nil
 }
 
-// MultiUnmarshaler implements Unmarshaler.  It uses the value of the Content-Type header in the
-// response to choose between the JSON and XML unmarshalers.  If Content-Type is something else,
-// an error is returned.
+// ContentTypeUnmarshaler selects an unmarshaler based on the content type, which should be a
+// valid media/mime type, in the form:
 //
-// MultiUnmarshaler is the default Unmarshaler.
-type MultiUnmarshaler struct {
-	jsonMar JSONMarshaler
-	xmlMar  XMLMarshaler
+//     type "/" [tree "."] subtype ["+" suffix] *[";" parameter]
+//
+// Unmarshalers are registered to handle a given media type.  Parameters are ignored:
+//
+//     ct := NewContentTypeUnmarshaler()
+//     ct.Unmarshalers["application/json"] = &JSONMarshaler{}
+//
+// If the full media type has no match, but there is a suffix, it will look for an Unmarshaler
+// registered for <type>/<suffix>.  For example, if there was no match for `application/vnd.api+json`,
+// it will look for `application/json`.
+type ContentTypeUnmarshaler struct {
+	Unmarshalers map[string]Unmarshaler
+}
+
+// NewContentTypeUnmarshaler returns a new ContentTypeUnmarshaler preconfigured to
+// handle application/json and application/xml.
+func NewContentTypeUnmarshaler() *ContentTypeUnmarshaler {
+	// install defaults
+	return &ContentTypeUnmarshaler{
+		Unmarshalers: defaultUnmarshalers(),
+	}
+}
+
+func defaultUnmarshalers() map[string]Unmarshaler {
+	return map[string]Unmarshaler{
+		MediaTypeJSON: &JSONMarshaler{},
+		MediaTypeXML:  &XMLMarshaler{},
+	}
 }
 
 // Unmarshal implements Unmarshaler.
-func (m *MultiUnmarshaler) Unmarshal(data []byte, contentType string, v interface{}) error {
-	switch {
-	case strings.Contains(contentType, MediaTypeJSON):
-		return m.jsonMar.Unmarshal(data, contentType, v)
-	case strings.Contains(contentType, MediaTypeXML):
-		return m.xmlMar.Unmarshal(data, contentType, v)
+//
+// If media type parsing fails, or no Unmarshaler is found, an error is returned.
+func (c *ContentTypeUnmarshaler) Unmarshal(data []byte, contentType string, v interface{}) error {
+	// for zero value ContentTypeUnmarshaler, initialize with defaults.
+	// This allows ContentTypeUnmarshaler to be a drop in replacement for MultiUnmarshaler
+	if c.Unmarshalers == nil {
+		c.Unmarshalers = map[string]Unmarshaler{
+			MediaTypeJSON: &JSONMarshaler{},
+			MediaTypeXML:  &XMLMarshaler{},
+		}
 	}
+
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return merry.Prependf(err, "failed to parse content type: %s", contentType)
+	}
+
+	if u := c.Unmarshalers[mediaType]; u != nil {
+		return u.Unmarshal(data, contentType, v)
+	}
+
+	// If exact match didn't find anything, try falling back to a looser match.
+	if ct := generalMediaType(mediaType); ct != "" {
+		if u := c.Unmarshalers[ct]; u != nil {
+			return u.Unmarshal(data, contentType, v)
+		}
+	}
+
 	return merry.Errorf("unsupported content type: %s", contentType)
 }
 
-// Apply implements Unmarshaler
-func (m *MultiUnmarshaler) Apply(r *Requester) error {
-	r.Unmarshaler = m
+// Apply implements Option
+func (c *ContentTypeUnmarshaler) Apply(r *Requester) error {
+	r.Unmarshaler = c
 	return nil
 }
+
+// Media types can have a suffix which indicates the underlying data structure,
+// e.g. application/vnd.api+json might indicate a payload that meets a strict API
+// schema, but the +suffix indicates the underlying data structure is JSON.
+// This will return a media type with just the suffix as the subtype, e.g.
+// application/vnd.api+json -> application/json
+//
+// If the media type isn't correctly formatted, the subtype has no suffix, or the suffix
+// is empty, this returns an empty string.
+func generalMediaType(s string) string {
+	i2 := strings.LastIndex(s, "+")
+	if i2 > -1 && len(s) > i2+1 { // has a non-zero length suffix
+		i := strings.Index(s, "/")
+		if i > -1 {
+			return s[:i+1] + s[i2+1:]
+		}
+	}
+	return ""
+}
+
+// MultiUnmarshaler is a legacy alias for ContentTypeUnmarshaler.
+type MultiUnmarshaler = ContentTypeUnmarshaler

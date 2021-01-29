@@ -110,6 +110,71 @@ func TestMultiUnmarshaler_Unmarshal(t *testing.T) {
 	})
 }
 
+func TestMultiUnmarshaler_Apply(t *testing.T) {
+	r := MustNew()
+	r.Marshaler = nil
+
+	m := &MultiUnmarshaler{}
+	r.MustApply(m)
+
+	assert.Equal(t, m, r.Unmarshaler)
+}
+
+func TestContentTypeUnmarshaler_Unmarshal(t *testing.T) {
+	m := NewContentTypeUnmarshaler()
+	m.Unmarshalers["another/thing"] = &JSONMarshaler{}
+
+	cases := []struct {
+		input       string
+		contentType string
+	}{
+		{
+			input:       `<testModel><color>red</color><count>30</count></testModel>`,
+			contentType: `application/xml`,
+		},
+		{
+			input:       `{"color":"red","count":30}`,
+			contentType: `application/json`,
+		},
+		{
+			input:       `{"color":"red","count":30}`,
+			contentType: `application/tree.subtype+json`,
+		},
+		{
+			input:       `{"color":"red","count":30}`,
+			contentType: `another/thing`,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.contentType, func(t *testing.T) {
+			var v testModel
+			err := m.Unmarshal([]byte(c.input), c.contentType, &v)
+			require.NoError(t, err)
+			require.Equal(t, testModel{"red", 30}, v)
+		})
+	}
+
+	t.Run("unknown", func(t *testing.T) {
+		err := m.Unmarshal([]byte(`{"color":"red","count":30}`), "application/unknown", &testModel{})
+		require.Error(t, err)
+	})
+
+	t.Run("invalid media type", func(t *testing.T) {
+		err := m.Unmarshal([]byte(`{"color":"red","count":30}`), "application|json", &testModel{})
+		require.Error(t, err)
+	})
+}
+
+func TestContentTypeUnmarshaler_Apply(t *testing.T) {
+	r := MustNew()
+	r.Marshaler = nil
+
+	m := NewContentTypeUnmarshaler()
+	r.MustApply(m)
+
+	assert.Equal(t, m, r.Unmarshaler)
+}
+
 func TestFormMarshaler_Marshal(t *testing.T) {
 
 	testCases := []struct {
@@ -157,16 +222,6 @@ func TestMarshalFunc_Apply(t *testing.T) {
 
 	_, s, _ := MustNew(mf).Marshaler.Marshal(nil)
 	assert.Equal(t, "red", s)
-}
-
-func TestMultiUnmarshaler_Apply(t *testing.T) {
-	r := MustNew()
-	r.Marshaler = nil
-
-	m := &MultiUnmarshaler{}
-	r.MustApply(m)
-
-	assert.Equal(t, m, r.Unmarshaler)
 }
 
 func ExampleFormMarshaler() {
