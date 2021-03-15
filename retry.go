@@ -139,6 +139,11 @@ func (c *ExponentialBackoff) Backoff(attempt int) time.Duration {
 // Retry retries the http request under certain conditions.  The number of retries,
 // retry conditions, and the time to sleep between retries can be configured.  If
 // config is nil, the DefaultRetryConfig will be used.
+//
+// Requests with bodies can only be retried if the request's GetBody function is
+// set.  It will be used to rewind the request body for the next attempt.  This
+// is set automatically for most body types, like strings, byte slices, string readers,
+// or byte readers.
 func Retry(config *RetryConfig) Middleware {
 	var c RetryConfig
 	if config == nil {
