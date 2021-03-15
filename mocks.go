@@ -81,7 +81,9 @@ func MockHandler(statusCode int, options ...Option) http.Handler {
 
 		writer.WriteHeader(statusCode)
 
-		_, _ = io.Copy(writer, req.Body)
+		if req.Body != nil {
+			_, _ = io.Copy(writer, req.Body)
+		}
 	})
 }
 

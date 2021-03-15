@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
-	"log"
+	sdklog "log"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -229,7 +229,7 @@ func ExampleDumpToLog() {
 	}))
 
 	// compatible with the log package's functions
-	Send(DumpToLog(log.Println))
+	Send(DumpToLog(sdklog.Println))
 
 	// compatible with the testing package's function
 	var t *testing.T

@@ -1,0 +1,398 @@
+package requester_test
+
+import (
+	"context"
+	. "github.com/gemalto/requester"
+	"github.com/gemalto/requester/httptestutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"io"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"syscall"
+	"testing"
+	"time"
+)
+
+func TestExponentialBackoff_Backoff(t *testing.T) {
+	tests := []struct {
+		name     string
+		backoff  ExponentialBackoff
+		expected [5]time.Duration
+	}{
+		{
+			name: "zero base delay",
+			backoff: ExponentialBackoff{
+				BaseDelay:  0,
+				Multiplier: 1,
+				Jitter:     1,
+				MaxDelay:   time.Second,
+			},
+			expected: [5]time.Duration{0, 0, 0, 0, 0},
+		},
+		{
+			name: "zero multiplier",
+			backoff: ExponentialBackoff{
+				BaseDelay:  1,
+				Multiplier: 0,
+				Jitter:     1,
+				MaxDelay:   time.Second,
+			},
+			expected: [5]time.Duration{1, 0, 0, 0, 0},
+		},
+		{
+			name: "zero jitter",
+			backoff: ExponentialBackoff{
+				BaseDelay:  1,
+				Multiplier: 2,
+				Jitter:     0,
+				MaxDelay:   time.Second,
+			},
+			expected: [5]time.Duration{1, 2, 4, 8, 16},
+		},
+		{
+			name: "zero max",
+			backoff: ExponentialBackoff{
+				BaseDelay:  1,
+				Multiplier: 2,
+				Jitter:     0,
+				MaxDelay:   0,
+			},
+			expected: [5]time.Duration{1, 0, 0, 0, 0},
+		},
+		{
+			name: "constant",
+			backoff: ExponentialBackoff{
+				BaseDelay:  30,
+				Multiplier: 1,
+				Jitter:     0,
+				MaxDelay:   time.Second,
+			},
+			expected: [5]time.Duration{30, 30, 30, 30, 30},
+		},
+		{
+			name: "max",
+			backoff: ExponentialBackoff{
+				BaseDelay:  30,
+				Multiplier: 2,
+				Jitter:     0,
+				MaxDelay:   100,
+			},
+			expected: [5]time.Duration{30, 60, 100, 100, 100},
+		},
+		{
+			name: "jitter",
+			backoff: ExponentialBackoff{
+				BaseDelay:  time.Second,
+				Multiplier: 2,
+				Jitter:     .1,
+				MaxDelay:   time.Minute,
+			},
+			expected: [5]time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second, 8 * time.Second, 16 * time.Second},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var results [5]time.Duration
+			for i := 0; i < 5; i++ {
+				results[i] = test.backoff.Backoff(i + 1)
+			}
+			if test.backoff.Jitter == 0 {
+				assert.Equal(t, test.expected, results)
+			} else {
+				for i, duration := range test.expected {
+					assert.InDelta(t, duration, results[i], float64(duration)*test.backoff.Jitter)
+				}
+			}
+		})
+	}
+}
+
+type netError struct {
+	temp    bool
+	timeout bool
+}
+
+func (m *netError) Error() string {
+	return "neterror"
+}
+
+func (m *netError) Timeout() bool {
+	return m.timeout
+}
+
+func (m *netError) Temporary() bool {
+	return m.temp
+}
+
+func TestDefaultShouldRetry(t *testing.T) {
+	assert.True(t, DefaultShouldRetry(1, nil, nil, &net.OpError{
+		Op:  "accept",
+		Err: syscall.ECONNRESET,
+	}))
+	assert.True(t, DefaultShouldRetry(1, nil, nil, &net.OpError{
+		Op:  "accept",
+		Err: syscall.ECONNABORTED,
+	}))
+	assert.True(t, DefaultShouldRetry(1, nil, nil, &netError{temp: true}))
+	assert.True(t, DefaultShouldRetry(1, nil, nil, &netError{timeout: true}))
+	assert.False(t, DefaultShouldRetry(1, nil, nil, &netError{}))
+	assert.False(t, DefaultShouldRetry(1, nil, MockResponse(400), nil))
+	assert.True(t, DefaultShouldRetry(1, nil, MockResponse(500), nil))
+	assert.False(t, DefaultShouldRetry(1, nil, MockResponse(501), nil))
+	assert.True(t, DefaultShouldRetry(1, nil, MockResponse(502), nil))
+}
+
+func TestRetry(t *testing.T) {
+	s := httptest.NewServer(MockHandler(500))
+	defer s.Close()
+
+	r := httptestutil.Requester(s, Retry(&RetryConfig{
+		MaxAttempts: 4,
+		Backoff: &ExponentialBackoff{
+			BaseDelay:  50 * time.Millisecond,
+			Multiplier: 2,
+			Jitter:     0,
+			MaxDelay:   time.Second,
+		},
+	}))
+
+	i := httptestutil.Inspect(s)
+
+	var resp *http.Response
+	var err error
+	t0 := time.Now()
+	done := make(chan bool)
+	go func() {
+		resp, _, err = r.Receive(nil)
+		done <- true
+	}()
+
+	var count int
+	var waits []time.Duration
+
+	stop := false
+	for !stop {
+		select {
+		case <-i.Exchanges:
+			count++
+			if count > 1 {
+				t1 := time.Now()
+				waits = append(waits, t1.Sub(t0))
+				t0 = t1
+			}
+		case <-time.After(time.Second):
+			require.Fail(t, "timeout", "after %v requests", count)
+		case <-done:
+			stop = true
+		}
+	}
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, resp) {
+		assert.Equal(t, 500, resp.StatusCode)
+	}
+
+	assert.Equal(t, 4, count)
+	require.Len(t, waits, 3)
+	assert.InDelta(t, 50*time.Millisecond, waits[0], float64(5*time.Millisecond))
+	assert.InDelta(t, 100*time.Millisecond, waits[1], float64(5*time.Millisecond))
+	assert.InDelta(t, 200*time.Millisecond, waits[2], float64(5*time.Millisecond))
+}
+
+func TestRetry_post(t *testing.T) {
+	s := httptest.NewServer(MockHandler(500))
+	defer s.Close()
+
+	r := httptestutil.Requester(s, Retry(&RetryConfig{
+		MaxAttempts: 4,
+		Backoff:     &ExponentialBackoff{BaseDelay: 0},
+	}))
+
+	i := httptestutil.Inspect(s)
+
+	expectBody := true
+
+	// consumes all pending requests in the inspector, asserts they have the right request and body,
+	// and returns how many there were.
+	count := func(t *testing.T) int {
+		var count int
+
+		for {
+			e := i.NextExchange()
+			if e == nil {
+				break
+			}
+
+			count++
+			assert.Equal(t, "POST", e.Request.Method)
+			if expectBody {
+				assert.Equal(t, "fudge", e.RequestBody.String())
+			}
+		}
+
+		return count
+	}
+
+	// most body types will be automatically wrapped with an appropriate GetBody function, so they can
+	// be correctly replayed.
+	resp, _, err := r.Receive(Post(), Body("fudge"))
+
+	require.NoError(t, err)
+	assert.Equal(t, 500, resp.StatusCode)
+	assert.Equal(t, 4, count(t))
+
+	// This type of body can't be converted, so the request's GetBody function will be nil.
+	// This will not be retried.
+	resp, _, err = r.Receive(Post(), Body(&dummyReader{next: strings.NewReader("fudge")}))
+	require.NoError(t, err)
+	assert.Equal(t, 500, resp.StatusCode)
+	assert.Equal(t, 1, count(t))
+
+	// http.NoBody is a special case.  It's a non-nil sentinel value indicating the request has
+	// no body.  We should be able to retry this, even though GetBody will be nil.
+	expectBody = false
+	resp, _, err = r.Receive(Post(), Body(http.NoBody))
+	require.NoError(t, err)
+	assert.Equal(t, 500, resp.StatusCode)
+	assert.Equal(t, 4, count(t))
+}
+
+type dummyReader struct {
+	next io.Reader
+}
+
+func (d *dummyReader) Read(p []byte) (n int, err error) {
+	return d.next.Read(p)
+}
+
+func TestRetry_respDrained(t *testing.T) {
+	s := httptest.NewServer(MockHandler(500, Body("fudge")))
+	defer s.Close()
+
+	var resps []*http.Response
+
+	r := httptestutil.Requester(s, Retry(&RetryConfig{
+		MaxAttempts: 4,
+		Backoff:     &ExponentialBackoff{BaseDelay: 0},
+	}), Middleware(func(doer Doer) Doer {
+		return DoerFunc(func(req *http.Request) (*http.Response, error) {
+			resp, err := doer.Do(req)
+			resps = append(resps, resp)
+			return resp, err
+		})
+	}))
+
+	_, body, err := r.Receive(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 4, len(resps))
+	assert.Equal(t, "fudge", string(body))
+
+	// all the response bodies should have been drained
+	for i, resp := range resps {
+		t.Log("checking response", i)
+		require.NotNil(t, resp)
+		bytes := make([]byte, 39)
+		_, err := resp.Body.Read(bytes)
+		assert.EqualError(t, err, "http: read on closed response body")
+	}
+}
+
+func TestRetry_cancelContext(t *testing.T) {
+	s := httptest.NewServer(MockHandler(500, Body("fudge")))
+	defer s.Close()
+
+	r := httptestutil.Requester(s, Retry(&RetryConfig{
+		MaxAttempts: 4,
+		Backoff:     &ExponentialBackoff{BaseDelay: 2 * time.Second},
+	}))
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	var err error
+	done := make(chan bool)
+	go func() {
+		_, _, err = r.ReceiveContext(ctx, nil)
+		done <- true
+	}()
+
+	cancelFunc()
+
+	select {
+	case <-time.After(time.Second):
+		require.Fail(t, "timed out")
+	case <-done:
+	}
+
+	require.ErrorIs(t, err, context.Canceled)
+}
+
+func TestRetry_shouldRetry(t *testing.T) {
+	var srvCount int
+	s := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		srvCount++
+		writer.WriteHeader(501 + srvCount)
+		writer.Write([]byte("fudge"))
+	}))
+	defer s.Close()
+
+	var count int
+	var attempts []int
+	var reqs []*http.Request
+	var resps []*http.Response
+
+	r := httptestutil.Requester(s, Retry(&RetryConfig{
+		MaxAttempts: 4,
+		Backoff:     &ExponentialBackoff{BaseDelay: 0},
+		ShouldRetry: ShouldRetryerFunc(func(attempt int, req *http.Request, resp *http.Response, err error) bool {
+			count++
+			attempts = append(attempts, attempt)
+			reqs = append(reqs, req)
+			resps = append(resps, resp)
+			return attempt != 3
+		}),
+	}))
+
+	_, _, err := r.Receive(nil)
+	require.NoError(t, err)
+
+	// our should function should tell it stop after 3 attempts, not 4
+	assert.Equal(t, 3, count)
+	assert.Len(t, attempts, 3)
+	for i := 0; i < 3; i++ {
+		// attempts should be 1, 2, and 3
+		assert.Equal(t, i+1, attempts[i])
+		// reqs and resps should be non nil
+		assert.NotNil(t, reqs[i])
+		if assert.NotNil(t, resps[i]) {
+			// each response should have a different code: 502, 503, and 504
+			assert.Equal(t, 501+attempts[i], resps[i].StatusCode)
+		}
+	}
+}
+
+func TestRetry_success(t *testing.T) {
+	s := httptest.NewServer(MockHandler(200, Body("fudge")))
+	defer s.Close()
+
+	r := httptestutil.Requester(s, Retry(nil))
+
+	i := httptestutil.Inspect(s)
+
+	resp, body, err := r.Receive(nil)
+	require.NoError(t, err)
+	assert.Equal(t, "fudge", string(body))
+	assert.Equal(t, 200, resp.StatusCode)
+
+	// it should not have retried, since the first attempt was a success
+
+	var count int
+	for i.NextExchange() != nil {
+		count++
+	}
+
+	assert.Equal(t, 1, count)
+}
