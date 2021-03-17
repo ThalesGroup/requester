@@ -59,6 +59,13 @@ if err != nil {
 fmt.Printf("%d %s %v", resp.StatusCode, string(body), r)
 ```
 
+# Installation
+
+    go get github.com/gemalto/requester
+
+Note: this repo was moved to github.com/ThalesGroup, but the name of the module is
+still github.com/gemalto: that is the name you must use to install with go modules.
+
 # Features
 
 - Functional option pattern supports an ergonomic API
