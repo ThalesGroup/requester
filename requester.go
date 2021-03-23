@@ -230,7 +230,7 @@ func (r *Requester) RequestContext(ctx context.Context, opts ...Option) (*http.R
 
 	req, err := http.NewRequest(reqs.Method, urlS, bodyData)
 	if err != nil {
-		return nil, err
+		return nil, merry.Prepend(err, "creating request")
 	}
 
 	// if we marshaled the body, use our content type
@@ -280,7 +280,7 @@ func (r *Requester) RequestContext(ctx context.Context, opts ...Option) (*http.R
 
 // getRequestBody returns the io.Reader which should be used as the body
 // of new Requester.
-func (r *Requester) getRequestBody() (body io.Reader, contentType string, err error) {
+func (r *Requester) getRequestBody() (body io.Reader, contentType string, _ error) {
 	switch v := r.Body.(type) {
 	case nil:
 		return nil, "", nil
@@ -297,9 +297,9 @@ func (r *Requester) getRequestBody() (body io.Reader, contentType string, err er
 		}
 		b, ct, err := marshaler.Marshal(r.Body)
 		if err != nil {
-			return nil, "", err
+			return nil, "", merry.Prepend(err, "marshaling body")
 		}
-		return bytes.NewReader(b), ct, err
+		return bytes.NewReader(b), ct, nil
 	}
 }
 
@@ -346,7 +346,9 @@ func (r *Requester) Do(req *http.Request) (*http.Response, error) {
 	if doer == nil {
 		doer = http.DefaultClient
 	}
-	return Wrap(doer, r.Middleware...).Do(req)
+
+	resp, err := Wrap(doer, r.Middleware...).Do(req)
+	return resp, merry.Wrap(err)
 }
 
 // Receive creates a new HTTP request and returns the response.

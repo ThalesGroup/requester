@@ -2,6 +2,7 @@ package requester
 
 import (
 	"errors"
+	"github.com/ansel1/merry"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -24,11 +25,13 @@ var DefaultBackoff = ExponentialBackoff{
 }
 
 // DefaultShouldRetry is the default ShouldRetryer.  It retries the request if the error is
-// a timeout or temporary, or if the status code is >=500, except for 501 (Not Implemented).
+// a timeout, temporary, or EOF error, or if the status code is >=500, except for 501 (Not Implemented).
 func DefaultShouldRetry(attempt int, req *http.Request, resp *http.Response, err error) bool {
 	var netError net.Error
 
 	switch {
+	case errors.Is(err, io.EOF):
+		return true
 	case errors.As(err, &netError) && (netError.Temporary() || netError.Timeout()):
 		return true
 	case err != nil:
@@ -206,7 +209,7 @@ func resetRequest(req *http.Request) (*http.Request, error) {
 	if req.Body != nil && req.Body != http.NoBody {
 		b, err := req.GetBody()
 		if err != nil {
-			return nil, err
+			return nil, merry.Prepend(err, "calling req.GetBody")
 		}
 
 		req.Body = b
