@@ -90,7 +90,7 @@ linters-settings:
 #          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
 #          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
 #          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
-  golint:
+  revive:
     # minimal confidence for issues, default is 0.8
 #    min-confidence: 0.8
   gofmt:
@@ -210,15 +210,14 @@ linters:
 ##    - godox               # checks for TODO comments.  not standardized
 ##    - gofmt               # checks code is formatted, handled by make prep
 ##    - goimports           # checks import order.  We're not using goimports
-    - golint
+    - revive
     - gosec
-    - interfacer
 ##    - lll                 # checks line length.  not enforced
 ##    - maligned            # optimizies struct field order, but structs are usually ordered for legibility
     - misspell
     - nakedret
 #    - prealloc            # slice optimizations, but promotes too much premature optimization
-    - scopelint
+    - exportloopref
     - stylecheck
     - unconvert
 ##    - unparam            # too many false positives
@@ -247,7 +246,6 @@ issues:
         - errcheck
         - dupl
         - gosec
-        - scopelint
         - gochecknoinits
         - gochecknoglobals
     - path: cmd
