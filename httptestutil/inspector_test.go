@@ -120,6 +120,30 @@ func TestInspector_LastExchange(t *testing.T) {
 	require.Nil(t, is.LastExchange())
 }
 
+func TestInspector_Drain(t *testing.T) {
+	ts := httptest.NewServer(nil)
+	defer ts.Close()
+
+	var count int
+	ts.Config.Handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.WriteHeader(201)
+		writer.Write([]byte("pong" + strconv.Itoa(count)))
+		count++
+	})
+
+	is := Inspect(ts)
+
+	Requester(ts).Receive(requester.Get("/test"))
+	Requester(ts).Receive(requester.Get("/test"))
+	Requester(ts).Receive(requester.Get("/test"))
+
+	drain := is.Drain()
+
+	require.Len(t, drain, 3)
+	assert.Equal(t, "pong1", drain[1].ResponseBody.String())
+	require.Nil(t, is.LastExchange())
+}
+
 func TestInspector_Clear(t *testing.T) {
 	ts := httptest.NewServer(nil)
 	defer ts.Close()

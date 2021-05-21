@@ -67,6 +67,20 @@ func (b *Inspector) LastExchange() *Exchange {
 	}
 }
 
+// Drain reads all buffered exchanges from the channel.
+func (b *Inspector) Drain() []*Exchange {
+	var e []*Exchange
+
+	for {
+		select {
+		case ex := <-b.Exchanges:
+			e = append(e, &ex)
+		default:
+			return e
+		}
+	}
+}
+
 // Clear drains the channel.
 func (b *Inspector) Clear() {
 	if b == nil {

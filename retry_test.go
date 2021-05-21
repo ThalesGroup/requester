@@ -144,9 +144,73 @@ func TestDefaultShouldRetry(t *testing.T) {
 	assert.True(t, DefaultShouldRetry(1, nil, MockResponse(500), nil))
 	assert.False(t, DefaultShouldRetry(1, nil, MockResponse(501), nil))
 	assert.True(t, DefaultShouldRetry(1, nil, MockResponse(502), nil))
+	assert.True(t, DefaultShouldRetry(1, nil, MockResponse(429), nil))
+}
+
+func TestOnlyIdempotentShouldRetry(t *testing.T) {
+	tests := []struct {
+		method   string
+		expected bool
+	}{
+		{http.MethodGet, true},
+		{http.MethodOptions, true},
+		{http.MethodHead, true},
+		{http.MethodTrace, true},
+		{http.MethodPost, false},
+		{http.MethodPut, false},
+		{http.MethodPatch, false},
+		{http.MethodDelete, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.method, func(t *testing.T) {
+			req, err := http.NewRequest(test.method, "http://test.com", nil)
+			require.NoError(t, err)
+
+			if test.expected {
+				assert.True(t, OnlyIdempotentShouldRetry(1, req, nil, nil))
+			} else {
+				assert.False(t, OnlyIdempotentShouldRetry(1, req, nil, nil))
+			}
+		})
+	}
+}
+
+func TestAllRetryers(t *testing.T) {
+	r := AllRetryers(ShouldRetryerFunc(DefaultShouldRetry), ShouldRetryerFunc(OnlyIdempotentShouldRetry))
+
+	// false + false = false
+	req, err := http.NewRequest(http.MethodPost, "http://test.com", nil)
+	require.NoError(t, err)
+	assert.False(t, r.ShouldRetry(1, req, MockResponse(400), nil))
+
+	// true + false = false
+	assert.False(t, r.ShouldRetry(1, req, MockResponse(500), nil))
+
+	// false + true = false
+	req, err = http.NewRequest(http.MethodGet, "http://test.com", nil)
+	require.NoError(t, err)
+	assert.False(t, r.ShouldRetry(1, req, MockResponse(400), nil))
+
+	// true + true = true
+	assert.True(t, r.ShouldRetry(1, req, MockResponse(500), nil))
+
 }
 
 func TestRetry(t *testing.T) {
+	// this test asserts that requests are retried the right number of times, and with the
+	// correct time interval between retries.
+
+	// to test this, create a server that always returns 500s, and a client with the an exponential
+	// backoff retry.  It should try one request immediately, then retry 3 times, after 50ms, 100ms, and 200ms
+	// respectively.
+
+	// we inject an inspector into the server to watch the requests.  We spawn a goroutine to
+	// call the client, then receive messages from the server inspector on a channel when a
+	// request happens.
+
+	// we record when we saw the requests, and confirm they happened roughly when expected.
+
 	s := httptest.NewServer(MockHandler(500))
 	defer s.Close()
 
@@ -167,19 +231,28 @@ func TestRetry(t *testing.T) {
 	t0 := time.Now()
 	done := make(chan bool)
 	go func() {
+		// spawn a go routine to call the client.  this will block until all the retries
+		// finish.
 		resp, _, err = r.Receive(nil)
+		// capture the response, and send a signal that the client finished.
 		done <- true
 	}()
 
+	// total requests detected
 	var count int
+	// how long was the time between each request.
 	var waits []time.Duration
 
-	stop := false
-	for !stop {
+loop:
+	for {
+		// on each loop, wait for the inspector to send a request on its channel.
+		// break out of the loop if the requester goroutine reported that the client
+		// call returned, or if we time out.
 		select {
 		case <-i.Exchanges:
 			count++
 			if count > 1 {
+				// keep track of the waits between retries
 				t1 := time.Now()
 				waits = append(waits, t1.Sub(t0))
 				t0 = t1
@@ -187,7 +260,7 @@ func TestRetry(t *testing.T) {
 		case <-time.After(time.Second):
 			require.Fail(t, "timeout", "after %v requests", count)
 		case <-done:
-			stop = true
+			break loop
 		}
 	}
 
@@ -198,12 +271,17 @@ func TestRetry(t *testing.T) {
 
 	assert.Equal(t, 4, count)
 	require.Len(t, waits, 3)
-	assert.InDelta(t, 50*time.Millisecond, waits[0], float64(5*time.Millisecond))
-	assert.InDelta(t, 100*time.Millisecond, waits[1], float64(5*time.Millisecond))
-	assert.InDelta(t, 200*time.Millisecond, waits[2], float64(5*time.Millisecond))
+	t.Log(waits)
+	assert.InDelta(t, 50*time.Millisecond, waits[0], float64(10*time.Millisecond))
+	assert.InDelta(t, 100*time.Millisecond, waits[1], float64(10*time.Millisecond))
+	assert.InDelta(t, 200*time.Millisecond, waits[2], float64(10*time.Millisecond))
 }
 
 func TestRetry_post(t *testing.T) {
+	// POST requests can only be retried if http.Request.GetBody is no nil.  test cases where
+	// it's set and the requests can be retried, and cases where it is nil and the request
+	// can't be retried.
+
 	s := httptest.NewServer(MockHandler(500))
 	defer s.Close()
 
@@ -270,6 +348,8 @@ func (d *dummyReader) Read(p []byte) (n int, err error) {
 }
 
 func TestRetry_respDrained(t *testing.T) {
+	// when retrying a request, the response body of the last attempt must be
+	// fully drained first, or there will be a leak.
 	s := httptest.NewServer(MockHandler(500, Body("fudge")))
 	defer s.Close()
 
@@ -302,6 +382,7 @@ func TestRetry_respDrained(t *testing.T) {
 }
 
 func TestRetry_cancelContext(t *testing.T) {
+	// context cancellation can be used to abort retries
 	s := httptest.NewServer(MockHandler(500, Body("fudge")))
 	defer s.Close()
 
@@ -331,6 +412,8 @@ func TestRetry_cancelContext(t *testing.T) {
 }
 
 func TestRetry_shouldRetry(t *testing.T) {
+	// test a custom ShouldRetry function.  also test that Retry calls the ShouldRetry function
+	// with the right args.
 	var srvCount int
 	s := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		srvCount++
@@ -375,6 +458,7 @@ func TestRetry_shouldRetry(t *testing.T) {
 }
 
 func TestRetry_success(t *testing.T) {
+	// if request succeeds, no retries
 	s := httptest.NewServer(MockHandler(200, Body("fudge")))
 	defer s.Close()
 
@@ -388,11 +472,89 @@ func TestRetry_success(t *testing.T) {
 	assert.Equal(t, 200, resp.StatusCode)
 
 	// it should not have retried, since the first attempt was a success
+	assert.Len(t, i.Drain(), 1)
+}
 
+// poisonedReader returns "fu" in the first call, and a connection
+// reset error in the next call.
+type poisonedReader struct {
+	remaining int
+}
+
+func (r *poisonedReader) Read(p []byte) (n int, err error) {
+	if r.remaining > 0 {
+		n = copy(p, "fu"[r.remaining:])
+		r.remaining -= n
+		return n, nil
+	}
+	return 0, &net.OpError{
+		Op:  "accept",
+		Err: syscall.ECONNRESET,
+	}
+}
+
+func TestRetry_readResponse(t *testing.T) {
+	// optionally, Retry can retry the request if an error occurs in the middle
+	// of reading the response body.  This is accomplished by having Retry
+	// read the entire response body into memory in the middleware.  This is not
+	// not the default: when downloading a file or a large response, it may not
+	// be desirable to read the entire response into memory.
+	// to test, use a mock Doer which simulates a connection reset error halfway
+	// through reading the response body.
 	var count int
-	for i.NextExchange() != nil {
-		count++
+
+	retryConfig := RetryConfig{
+		MaxAttempts: 4,
+		Backoff: &ExponentialBackoff{
+			BaseDelay:  1,
+			Multiplier: 1,
+			Jitter:     0,
+			MaxDelay:   time.Second,
+		},
 	}
 
+	newRequester := func() *Requester {
+		r, err := New(
+			Retry(&retryConfig),
+			WithDoer(DoerFunc(func(req *http.Request) (*http.Response, error) {
+				count++
+				// I can't cause a real connection reset error using httptest, so I need to simulate
+				// it with a fake Doer.  https://groups.google.com/g/golang-nuts/c/AtxmEDJ4zvc
+				if count > 2 {
+					// on the third attempt, just return a valid response
+					return MockResponse(200, Body("fudge")), nil
+				}
+
+				// return a response with a poisoned response body will will thrown an error after
+				// a few bytes
+				resp := MockResponse(200)
+				resp.Body = io.NopCloser(&poisonedReader{})
+				return resp, nil
+			})),
+		)
+		require.NoError(t, err)
+		return r
+	}
+
+	r := newRequester()
+
+	// without setting flag, it should fail after the first attempt.
+	// it will not be retried
+	_, _, err := r.Receive(nil)
+	assert.ErrorIs(t, err, syscall.ECONNRESET)
 	assert.Equal(t, 1, count)
+
+	// now try the flag
+	count = 0
+	retryConfig.ReadResponse = true
+	r = newRequester()
+
+	resp, body, err := r.Receive(nil)
+	require.NoError(t, err)
+	assert.Equal(t, "fudge", string(body))
+	assert.Equal(t, 200, resp.StatusCode)
+
+	// should have taken 3 tries
+	assert.Equal(t, 3, count)
+
 }

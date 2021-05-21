@@ -3,6 +3,9 @@ all: tidy fmt lint test
 test:
 	go test ./...
 
+testall:
+	go test -count 1 ./...
+
 build:
 	mkdir build
 

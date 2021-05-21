@@ -1,6 +1,7 @@
 package requester
 
 import (
+	"bytes"
 	"errors"
 	"github.com/ansel1/merry"
 	"io"
@@ -25,7 +26,7 @@ var DefaultBackoff = ExponentialBackoff{
 }
 
 // DefaultShouldRetry is the default ShouldRetryer.  It retries the request if the error is
-// a timeout, temporary, or EOF error, or if the status code is >=500, except for 501 (Not Implemented).
+// a timeout, temporary, or EOF error, or if the status code is 429, >=500, except for 501 (Not Implemented).
 func DefaultShouldRetry(attempt int, req *http.Request, resp *http.Response, err error) bool {
 	var netError net.Error
 
@@ -36,11 +37,26 @@ func DefaultShouldRetry(attempt int, req *http.Request, resp *http.Response, err
 		return true
 	case err != nil:
 		return false
-	case resp.StatusCode == 500, resp.StatusCode > 501:
+	case resp.StatusCode == 500, resp.StatusCode > 501, resp.StatusCode == 429:
 		return true
 	}
 
 	return false
+}
+
+// OnlyIdempotentShouldRetry returns true if the request is using one of the HTTP methods which
+// are intended to be idempotent: GET, HEAD, OPTIONS, and TRACE.  Should be combined with other criteria
+// using AllRetryers(), for example:
+//
+//     c.ShouldRetry = AllRetryers(ShouldRetryerFunc(DefaultShouldRetry), ShouldRetryerFunc(OnlyIdempotentShouldRetry))
+//
+func OnlyIdempotentShouldRetry(_ int, req *http.Request, _ *http.Response, _ error) bool {
+	switch req.Method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodTrace:
+		return true
+	default:
+		return false
+	}
 }
 
 // RetryConfig defines settings for the Retry middleware.
@@ -55,6 +71,9 @@ type RetryConfig struct {
 	// Backoff returns how long to wait between retries.  Defaults to
 	// an exponential backoff with some jitter.
 	Backoff Backoffer
+	// ReadResponse will ensure the entire response is read before
+	// consider the request a success
+	ReadResponse bool
 }
 
 func (c *RetryConfig) normalize() {
@@ -84,6 +103,18 @@ type ShouldRetryerFunc func(attempt int, req *http.Request, resp *http.Response,
 // ShouldRetry implements ShouldRetryer
 func (s ShouldRetryerFunc) ShouldRetry(attempt int, req *http.Request, resp *http.Response, err error) bool {
 	return s(attempt, req, resp, err)
+}
+
+// AllRetryers returns a ShouldRetryer which returns true only if all the supplied retryers return true.
+func AllRetryers(s ...ShouldRetryer) ShouldRetryer {
+	return ShouldRetryerFunc(func(attempt int, req *http.Request, resp *http.Response, err error) bool {
+		for _, shouldRetryer := range s {
+			if !shouldRetryer.ShouldRetry(attempt, req, resp, err) {
+				return false
+			}
+		}
+		return true
+	})
 }
 
 // Backoffer calculates how long to wait between attempts.  The attempt argument is the attempt which
@@ -170,6 +201,13 @@ func Retry(config *RetryConfig) Middleware {
 			for {
 				resp, err = next.Do(req)
 				attempt++
+
+				// if ReadResponse, then also read the entire response into a buffer, to ensure no
+				// error occurs
+				if err == nil && c.ReadResponse {
+					resp.Body, err = bufRespBody(resp.Body)
+				}
+
 				if attempt >= c.MaxAttempts || !c.ShouldRetry.ShouldRetry(attempt, req, resp, err) {
 					break
 				}
@@ -196,6 +234,36 @@ func Retry(config *RetryConfig) Middleware {
 			return resp, err
 		})
 	}
+}
+
+type errCloser struct {
+	io.Reader
+	err error
+}
+
+func (e *errCloser) Close() error {
+	return e.err
+}
+
+// bufRespBody reads all of b to memory and then returns a ReadCloser yielding
+// the same bytes.  It returns an error if reading from the input fails.  If
+// closing the input fails, it returns a ReadCloser with a Close() that returns
+// this error.
+func bufRespBody(b io.ReadCloser) (r io.ReadCloser, err error) {
+	if b == nil || b == http.NoBody {
+		return b, nil
+	}
+	var buf bytes.Buffer
+	if _, err = buf.ReadFrom(b); err != nil {
+		return nil, err
+	}
+	if err := b.Close(); err != nil {
+		return &errCloser{
+			Reader: &buf,
+			err:    err,
+		}, nil
+	}
+	return io.NopCloser(&buf), nil
 }
 
 func resetRequest(req *http.Request) (*http.Request, error) {
