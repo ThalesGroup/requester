@@ -18,9 +18,10 @@ import (
 
 func TestExponentialBackoff_Backoff(t *testing.T) {
 	tests := []struct {
-		name     string
-		backoff  ExponentialBackoff
-		expected [5]time.Duration
+		name           string
+		backoff        ExponentialBackoff
+		expected       [5]time.Duration
+		expectedJitter float64
 	}{
 		{
 			name: "zero base delay",
@@ -35,12 +36,13 @@ func TestExponentialBackoff_Backoff(t *testing.T) {
 		{
 			name: "zero multiplier",
 			backoff: ExponentialBackoff{
-				BaseDelay:  1,
+				BaseDelay:  time.Second,
 				Multiplier: 0,
-				Jitter:     1,
-				MaxDelay:   time.Second,
+				Jitter:     .2,
+				MaxDelay:   time.Minute,
 			},
-			expected: [5]time.Duration{1, 0, 0, 0, 0},
+			expected:       [5]time.Duration{time.Second, time.Second, time.Second, time.Second, time.Second},
+			expectedJitter: 0.2,
 		},
 		{
 			name: "zero jitter",
@@ -60,13 +62,13 @@ func TestExponentialBackoff_Backoff(t *testing.T) {
 				Jitter:     0,
 				MaxDelay:   0,
 			},
-			expected: [5]time.Duration{1, 0, 0, 0, 0},
+			expected: [5]time.Duration{1, 2, 4, 8, 16},
 		},
 		{
 			name: "constant",
 			backoff: ExponentialBackoff{
 				BaseDelay:  30,
-				Multiplier: 1,
+				Multiplier: 0,
 				Jitter:     0,
 				MaxDelay:   time.Second,
 			},
@@ -90,7 +92,49 @@ func TestExponentialBackoff_Backoff(t *testing.T) {
 				Jitter:     .1,
 				MaxDelay:   time.Minute,
 			},
-			expected: [5]time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second, 8 * time.Second, 16 * time.Second},
+			expected:       [5]time.Duration{1 * time.Second, 2 * time.Second, 4 * time.Second, 8 * time.Second, 16 * time.Second},
+			expectedJitter: 0.1,
+		},
+		{
+			name: "base more than max",
+			backoff: ExponentialBackoff{
+				BaseDelay:  2 * time.Second,
+				Multiplier: 0,
+				Jitter:     0,
+				MaxDelay:   time.Second,
+			},
+			expected: [5]time.Duration{time.Second, time.Second, time.Second, time.Second, time.Second},
+		},
+		{
+			name:     "no delay",
+			backoff:  ExponentialBackoff{},
+			expected: [5]time.Duration{0, 0, 0, 0, 0},
+		},
+		{
+			name: "fixed delay",
+			backoff: ExponentialBackoff{
+				BaseDelay: time.Second,
+			},
+			expected: [5]time.Duration{time.Second, time.Second, time.Second, time.Second, time.Second},
+		},
+		{
+			name: "fixed delay with jitter",
+			backoff: ExponentialBackoff{
+				BaseDelay: time.Second,
+				Jitter:    .2,
+			},
+			expected:       [5]time.Duration{time.Second, time.Second, time.Second, time.Second, time.Second},
+			expectedJitter: 0.2,
+		},
+		{
+			name: "jitter wont go over max",
+			backoff: ExponentialBackoff{
+				BaseDelay: time.Second,
+				Jitter:    .2,
+				MaxDelay:  time.Second,
+			},
+			expected:       [5]time.Duration{900 * time.Millisecond, 900 * time.Millisecond, 900 * time.Millisecond, 900 * time.Millisecond, 900 * time.Millisecond},
+			expectedJitter: 0.1,
 		},
 	}
 
@@ -100,11 +144,17 @@ func TestExponentialBackoff_Backoff(t *testing.T) {
 			for i := 0; i < 5; i++ {
 				results[i] = test.backoff.Backoff(i + 1)
 			}
-			if test.backoff.Jitter == 0 {
-				assert.Equal(t, test.expected, results)
-			} else {
+			if test.expectedJitter > 0 {
 				for i, duration := range test.expected {
 					assert.InDelta(t, duration, results[i], float64(duration)*test.backoff.Jitter)
+				}
+				assert.NotEqual(t, test.expected, results, "shouldn't be exactly equal, missing the jitter")
+			} else {
+				assert.Equal(t, test.expected, results)
+			}
+			if test.backoff.MaxDelay > 0 {
+				for _, duration := range results {
+					assert.LessOrEqual(t, duration, test.backoff.MaxDelay)
 				}
 			}
 		})
@@ -112,7 +162,6 @@ func TestExponentialBackoff_Backoff(t *testing.T) {
 }
 
 type netError struct {
-	temp    bool
 	timeout bool
 }
 
@@ -125,7 +174,7 @@ func (m *netError) Timeout() bool {
 }
 
 func (m *netError) Temporary() bool {
-	return m.temp
+	return false
 }
 
 func TestDefaultShouldRetry(t *testing.T) {
@@ -137,7 +186,7 @@ func TestDefaultShouldRetry(t *testing.T) {
 		Op:  "accept",
 		Err: syscall.ECONNABORTED,
 	}))
-	assert.True(t, DefaultShouldRetry(1, nil, nil, &netError{temp: true}))
+	assert.True(t, DefaultShouldRetry(1, nil, nil, syscall.EPIPE))
 	assert.True(t, DefaultShouldRetry(1, nil, nil, &netError{timeout: true}))
 	assert.False(t, DefaultShouldRetry(1, nil, nil, &netError{}))
 	assert.False(t, DefaultShouldRetry(1, nil, MockResponse(400), nil))

@@ -6,9 +6,11 @@ import (
 	"github.com/ansel1/merry"
 	"io"
 	"io/ioutil"
+	"math"
 	"math/rand"
 	"net"
 	"net/http"
+	"syscall"
 	"time"
 )
 
@@ -27,20 +29,22 @@ var DefaultBackoff = ExponentialBackoff{
 
 // DefaultShouldRetry is the default ShouldRetryer.  It retries the request if the error is
 // a timeout, temporary, or EOF error, or if the status code is 429, >=500, except for 501 (Not Implemented).
-func DefaultShouldRetry(attempt int, req *http.Request, resp *http.Response, err error) bool {
+func DefaultShouldRetry(_ int, _ *http.Request, resp *http.Response, err error) bool {
 	var netError net.Error
 
 	switch {
-	case errors.Is(err, io.EOF):
+	case err == nil:
+		return resp.StatusCode == 500 || resp.StatusCode > 501 || resp.StatusCode == 429
+	case errors.Is(err, io.EOF),
+		errors.Is(err, syscall.ECONNRESET),
+		errors.Is(err, syscall.ECONNABORTED),
+		errors.Is(err, syscall.EPIPE):
 		return true
-	case errors.As(err, &netError) && (netError.Temporary() || netError.Timeout()):
-		return true
-	case err != nil:
-		return false
-	case resp.StatusCode == 500, resp.StatusCode > 501, resp.StatusCode == 429:
+	case errors.As(err, &netError) && netError.Timeout():
 		return true
 	}
 
+	// Some unknown, internal error.  Shouldn't retry.
 	return false
 }
 
@@ -48,8 +52,7 @@ func DefaultShouldRetry(attempt int, req *http.Request, resp *http.Response, err
 // are intended to be idempotent: GET, HEAD, OPTIONS, and TRACE.  Should be combined with other criteria
 // using AllRetryers(), for example:
 //
-//     c.ShouldRetry = AllRetryers(ShouldRetryerFunc(DefaultShouldRetry), ShouldRetryerFunc(OnlyIdempotentShouldRetry))
-//
+//	c.ShouldRetry = AllRetryers(ShouldRetryerFunc(DefaultShouldRetry), ShouldRetryerFunc(OnlyIdempotentShouldRetry))
 func OnlyIdempotentShouldRetry(_ int, req *http.Request, _ *http.Response, _ error) bool {
 	switch req.Method {
 	case http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodTrace:
@@ -133,38 +136,73 @@ func (b BackofferFunc) Backoff(attempt int) time.Duration {
 
 // ExponentialBackoff defines the configuration options for an exponential backoff strategy.
 // The implementation is based on the one from grpc.
+//
+// The zero value of this struct implements a zero backoff, i.e. no delay between retries.
+//
+// Examples:
+//
+//	// exponential backoff.  First delay is one second, each subsequent
+//	// delay is 1.6x higher, plus or minus %20 jitter, up to a max
+//	// of 120 seconds.
+//	&ExponentialBackoff{
+//	  BaseDelay:  1.0 * time.Second,
+//	  Multiplier: 1.6,
+//	  Jitter:     0.2,
+//	  MaxDelay:   120 * time.Second,
+//	}
+//
+//	// no backoff
+//	&ExponentialBackoff{}
+//
+//	// fixed backoff
+//	&ExponentialBackoff{
+//	  BaseDelay: 1 * time.Second,
+//	}
+//
+//	// fixed backoff with some jitter
+//	&ExponentialBackoff{
+//	  BaseDelay: 1 * time.Second,
+//	  Jitter: 0.2,
+//	}
 type ExponentialBackoff struct {
 	// BaseDelay is the amount of time to backoff after the first failure.
 	BaseDelay time.Duration
 	// Multiplier is the factor with which to multiply backoffs after a
-	// failed retry. Should ideally be greater than 1.
+	// failed retry. Should ideally be greater than 1.  0 means no multiplier: delay
+	// will be fixed (plus jitter).  This is equivalent to a Multiplier of 1.
 	Multiplier float64
-	// Jitter is the factor with which backoffs are randomized.
+	// Jitter is the factor with which backoffs are randomized.  Should ideally be
+	// less than 1.  If added jitter would make the delay greater than MaxDelay, the jitter
+	// will be redistributed below the MaxDelay.  0 means no jitter.
 	Jitter float64
-	// MaxDelay is the upper bound of backoff delay.
+	// MaxDelay is the upper bound of backoff delay.  0 means no max.
 	MaxDelay time.Duration
 }
 
 func (c *ExponentialBackoff) Backoff(attempt int) time.Duration {
-	if attempt == 1 {
-		return c.BaseDelay
+	backoff := float64(c.BaseDelay)
+
+	if c.Multiplier > 0 {
+		backoff *= math.Pow(c.Multiplier, float64(attempt-1))
 	}
 
-	backoff, max := float64(c.BaseDelay), float64(c.MaxDelay)
-	for backoff < max && attempt > 1 {
-		backoff *= c.Multiplier
-		attempt--
+	maxDelayf := float64(c.MaxDelay)
+	if c.MaxDelay > 0 {
+		backoff = math.Min(backoff, maxDelayf)
 	}
 
-	if backoff > max {
-		backoff = max
-	}
-	// Randomize backoff delays so that if a cluster of requests start at
-	// the same time, they won't operate in lockstep.
-	// nolint:gosec
-	backoff *= 1 + c.Jitter*(rand.Float64()*2-1)
-	if backoff < 0 {
-		return 0
+	backoff = math.Max(0, backoff)
+
+	if c.Jitter > 0 {
+		// nolint:gosec
+		backoff *= 1 + c.Jitter*(rand.Float64()*2-1)
+		if c.MaxDelay > 0 {
+			if delta := backoff - maxDelayf; delta > 0 {
+				// jitter bumped the backoff above max delay.  Redistribute
+				// below max
+				backoff = maxDelayf - delta
+			}
+		}
 	}
 
 	return time.Duration(backoff)
