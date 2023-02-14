@@ -23,52 +23,51 @@ import (
 //
 // A Requester can be constructed as a literal:
 //
-//     r := requester.Requester{
-//              URL:    u,
-//              Method: "POST",
-//              Body:   b,
-//          }
+//	r := requester.Requester{
+//	         URL:    u,
+//	         Method: "POST",
+//	         Body:   b,
+//	     }
 //
 // ...or via the New() and MustNew() constructors, which take Options:
 //
-//     reqs, err := requester.New(requester.Post("http://test.com/red"), requester.Body(b))
+//	reqs, err := requester.New(requester.Post("http://test.com/red"), requester.Body(b))
 //
 // Additional options can be applied with Apply() and MustApply():
 //
-//     err := reqs.Apply(requester.Accept("application/json"))
+//	err := reqs.Apply(requester.Accept("application/json"))
 //
 // Requesters can be cloned.  The clone can
 // then be further configured without affecting the parent:
 //
-//     reqs2 := reqs.Clone()
-//     err := reqs2.Apply(Header("X-Frame","1"))
+//	reqs2 := reqs.Clone()
+//	err := reqs2.Apply(Header("X-Frame","1"))
 //
 // With()/MustWith() is equivalent to Clone() and Apply()/MustApply():
 //
-//     reqs2, err := reqs.With(requester.Header("X-Frame","1"))
+//	reqs2, err := reqs.With(requester.Header("X-Frame","1"))
 //
 // The remaining methods of Requester are for creating HTTP requests, sending them, and handling
 // the responses: Request(), Send(), and Receive().
 //
-//     req, err := reqs.Request()          // create a requests
-//     resp, err := reqs.Send()            // create and send a request
+//	req, err := reqs.Request()          // create a requests
+//	resp, err := reqs.Send()            // create and send a request
 //
-//     var m Resource
-//     resp, body, err := reqs.Receive(&m) // create and send request, read and unmarshal response
+//	var m Resource
+//	resp, body, err := reqs.Receive(&m) // create and send request, read and unmarshal response
 //
 // Request(), Send(), and Receive() all accept a varargs of Options, which will be applied
 // only to a single request, not to the Requester.
 //
-//     req, err := reqs.Request(
-//                          requester.Put("users/bob"),
-//                          requester.Body(bob),
-//                        )
+//	req, err := reqs.Request(
+//	                     requester.Put("users/bob"),
+//	                     requester.Body(bob),
+//	                   )
 //
 // RequestContext(), SendContext(), and ReceiveContext() variants accept a context, which is
 // attached to the constructed request:
 //
-//     req, err        := reqs.RequestContext(ctx)
-//
+//	req, err        := reqs.RequestContext(ctx)
 type Requester struct {
 
 	//  Attributes affecting the construction of http.Requester.
@@ -200,7 +199,6 @@ func (r *Requester) Clone() *Requester {
 //
 // If r.Body is an io.Reader, string, or []byte, it is set as the request
 // body directly, and no default Content-Type is set.
-//
 func (r *Requester) Request(opts ...Option) (*http.Request, error) {
 	return r.RequestContext(context.Background(), opts...)
 }
@@ -208,8 +206,7 @@ func (r *Requester) Request(opts ...Option) (*http.Request, error) {
 // RequestContext does the same as Request, but requires a context.  Use this
 // to set a request timeout:
 //
-//     req, err := r.RequestContext(context.WithTimeout(context.Background(), 10 * time.Seconds))
-//
+//	req, err := r.RequestContext(context.WithTimeout(context.Background(), 10 * time.Seconds))
 func (r *Requester) RequestContext(ctx context.Context, opts ...Option) (*http.Request, error) {
 
 	reqs, err := r.withOpts(opts...)

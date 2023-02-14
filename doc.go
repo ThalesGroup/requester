@@ -4,9 +4,9 @@ http package with conveniences for configuring requests and processing responses
 
 The central, package-level functions are:
 
- Request(...Option) (*http.Request, error)
- Send(...Option) (*http.Response, error)
- Receive(interface{}, ...Option) (*http.Response, []byte, error)
+	Request(...Option) (*http.Request, error)
+	Send(...Option) (*http.Response, error)
+	Receive(interface{}, ...Option) (*http.Response, []byte, error)
 
 Context-aware variants are also available.
 
@@ -19,7 +19,7 @@ are handled.
 Most methods and functions in the package accept Options, which are functions that configure the attributes
 of Requesters.  The package provides many options for configuring most attributes Requester.
 
-Receive
+# Receive
 
 Receive() builds a request, executes it, and reads the response body.  If a target value is provided,
 Receive will attempt to unmarshal the body into the target value.
@@ -45,7 +45,7 @@ the response body into a struct.  This can be customized by setting Requester.Un
 
 	reqs.Unmarshaler = &requester.XMLMarshaler(Indent:true)
 
-Query Params
+# Query Params
 
 Requester.QueryParams will be merged into any query parameters encoded into the
 URL.  For example:
@@ -82,7 +82,7 @@ a struct.  Structs are marshaled into url.Values using "github.com/google/go-que
 	r.URL.String()
 	// Output: http://test.com?color=blue,flavor=vanilla,temp=hot,speed=fast,volume=loud
 
-Body
+# Body
 
 If Requester.Body is set to a string, []byte, or io.Reader, the value will
 be used directly as the request body:
@@ -123,7 +123,7 @@ Requester.Marshaler:
 
 Note the default Marshaler is JSON, and sets the request's Content-Type header.
 
-HTTP Client Options
+# HTTP Client Options
 
 The HTTP client used to execute requests can also be customized with Options:
 
@@ -138,7 +138,7 @@ The HTTP client used to execute requests can also be customized with Options:
 http.Clients.  The requester.Client(...httpclient.Option) option constructs a new HTTP client
 and installs it into Requester.Doer.
 
-Doer and Middleware
+# Doer and Middleware
 
 Requester uses a Doer to execute requests, which is an interface.  By default, http.DefaultClient is used,
 but this can be replaced by a customized client, or a mock Doer:

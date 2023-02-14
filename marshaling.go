@@ -84,10 +84,9 @@ func (f UnmarshalFunc) Unmarshal(data []byte, contentType string, v interface{})
 // JSONMarshaler implement Marshaler and Unmarshaler.  It marshals values to and
 // from JSON.  If Indent is true, marshaled JSON will be indented.
 //
-//   r := requester.Requester{
-//       Body: &JSONMarshaler{},
-//   }
-//
+//	r := requester.Requester{
+//	    Body: &JSONMarshaler{},
+//	}
 type JSONMarshaler struct {
 	Indent bool
 }
@@ -117,10 +116,9 @@ func (m *JSONMarshaler) Apply(r *Requester) error {
 // XMLMarshaler implements Marshaler and Unmarshaler.  It marshals values to
 // and from XML.  If Indent is true, marshaled XML will be indented.
 //
-//     r := requester.Requester{
-//         Marshaler: &XMLMarshaler{},
-//     }
-//
+//	r := requester.Requester{
+//	    Marshaler: &XMLMarshaler{},
+//	}
 type XMLMarshaler struct {
 	Indent bool
 }
@@ -183,12 +181,12 @@ func (m *FormMarshaler) Apply(r *Requester) error {
 // ContentTypeUnmarshaler selects an unmarshaler based on the content type, which should be a
 // valid media/mime type, in the form:
 //
-//     type "/" [tree "."] subtype ["+" suffix] *[";" parameter]
+//	type "/" [tree "."] subtype ["+" suffix] *[";" parameter]
 //
 // Unmarshalers are registered to handle a given media type.  Parameters are ignored:
 //
-//     ct := NewContentTypeUnmarshaler()
-//     ct.Unmarshalers["application/json"] = &JSONMarshaler{}
+//	ct := NewContentTypeUnmarshaler()
+//	ct.Unmarshalers["application/json"] = &JSONMarshaler{}
 //
 // If the full media type has no match, but there is a suffix, it will look for an Unmarshaler
 // registered for <type>/<suffix>.  For example, if there was no match for `application/vnd.api+json`,

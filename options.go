@@ -50,8 +50,8 @@ func (f OptionFunc) Apply(r *Requester) error {
 //
 // Equivalent to:
 //
-//     r2 := r.Clone()
-//     r2.Apply(...)
+//	r2 := r.Clone()
+//	r2.Apply(...)
 func (r *Requester) With(opts ...Option) (*Requester, error) {
 	r2 := r.Clone()
 	err := r2.Apply(opts...)
@@ -66,8 +66,8 @@ func (r *Requester) With(opts ...Option) (*Requester, error) {
 //
 // Equivalent to:
 //
-//     r2 := r.Clone()
-//     r2.MustApply(...)
+//	r2 := r.Clone()
+//	r2.MustApply(...)
 func (r *Requester) MustWith(opts ...Option) *Requester {
 	if r2, err := r.With(opts...); err != nil {
 		panic(err)
@@ -246,9 +246,9 @@ func RelativeURL(paths ...string) Option {
 //
 // For example:
 //
-//     baseURL = http://test.com/users/bob
-//     + RelativeURL(frank) = http://test.com/users/frank
-//     + AppendPath(frank)  = http://test.com/users/bob/frank
+//	baseURL = http://test.com/users/bob
+//	+ RelativeURL(frank) = http://test.com/users/frank
+//	+ AppendPath(frank)  = http://test.com/users/bob/frank
 //
 // See ExampleAppendPath for more examples.
 func AppendPath(elements ...string) Option {
@@ -308,9 +308,9 @@ func AppendPath(elements ...string) Option {
 // the github.com/google/go-querystring/query package.  Structs should tag
 // their members with the "url" tag, e.g.:
 //
-//     type ReqParams struct {
-//         Color string `url:"color"`
-//     }
+//	type ReqParams struct {
+//	    Color string `url:"color"`
+//	}
 //
 // An error will be returned if marshaling the struct fails.
 func QueryParams(queryStructs ...interface{}) Option {

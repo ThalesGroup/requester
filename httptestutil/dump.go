@@ -77,10 +77,9 @@ func (f logFunc) Write(p []byte) (n int, err error) {
 // signature is the same as testing.T.Log, so it can be used to pipe
 // traffic to the test log:
 //
-//     func TestHandler(t *testing.T) {
-//         ...
-//         DumpToLog(ts, t.Log)
-//
+//	func TestHandler(t *testing.T) {
+//	    ...
+//	    DumpToLog(ts, t.Log)
 func DumpToLog(ts *httptest.Server, logf func(a ...interface{})) {
 	Dump(ts, logFunc(logf))
 }

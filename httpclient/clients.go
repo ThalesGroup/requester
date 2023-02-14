@@ -8,8 +8,7 @@
 //
 // Example:
 //
-//     c, err := httpclient.New(httpclient.SkipVerify(), httpclient.Timeout(10 * time.Seconds))
-//
+//	c, err := httpclient.New(httpclient.SkipVerify(), httpclient.Timeout(10 * time.Seconds))
 package httpclient
 
 import (
