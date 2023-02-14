@@ -188,15 +188,12 @@ linters:
   # to try out individual linters: golangci-lint run -E gocyclo,gosimple
   enable:
     - staticcheck
-    - deadcode
     - errcheck
     - gosimple
     - govet
     - ineffassign
-    - structcheck
 ##    - typecheck          # redundant?  compiler does this
     - unused
-    - varcheck
 ##    - bodyclose            # too many false positives
     - depguard
 ##    - dogsled            # checks for too many blank identifiers.  don't care
