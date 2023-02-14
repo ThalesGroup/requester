@@ -3,6 +3,7 @@ package requester
 import (
 	"io"
 	"net/http"
+	"strings"
 )
 
 // These are tools for writing tests.
@@ -57,6 +58,11 @@ func MockResponse(statusCode int, options ...Option) *http.Response {
 		TransferEncoding: r.TransferEncoding,
 		// TODO: Close,
 		Trailer: r.Trailer,
+	}
+
+	if resp.Body == nil {
+		// response body is always expected to be non-nil
+		resp.Body = io.NopCloser(strings.NewReader(""))
 	}
 	return resp
 }

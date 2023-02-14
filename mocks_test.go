@@ -61,6 +61,9 @@ func TestMockResponse(t *testing.T) {
 
 	b, _ := ioutil.ReadAll(resp.Body)
 	assert.JSONEq(t, `{"color":"red"}`, string(b))
+
+	resp = MockResponse(500)
+	assert.NotNil(t, resp.Body)
 }
 
 func TestMockDoer(t *testing.T) {
