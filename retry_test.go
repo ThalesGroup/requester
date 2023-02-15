@@ -107,22 +107,17 @@ func TestExponentialBackoff_Backoff(t *testing.T) {
 		},
 		{
 			name:     "no delay",
-			backoff:  ExponentialBackoff{},
+			backoff:  *NoBackoff(),
 			expected: [5]time.Duration{0, 0, 0, 0, 0},
 		},
 		{
-			name: "fixed delay",
-			backoff: ExponentialBackoff{
-				BaseDelay: time.Second,
-			},
+			name:     "constant delay",
+			backoff:  *ConstantBackoff(time.Second),
 			expected: [5]time.Duration{time.Second, time.Second, time.Second, time.Second, time.Second},
 		},
 		{
-			name: "fixed delay with jitter",
-			backoff: ExponentialBackoff{
-				BaseDelay: time.Second,
-				Jitter:    .2,
-			},
+			name:           "constant delay with jitter",
+			backoff:        *ConstantBackoffWithJitter(time.Second),
 			expected:       [5]time.Duration{time.Second, time.Second, time.Second, time.Second, time.Second},
 			expectedJitter: 0.2,
 		},

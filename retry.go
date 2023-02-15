@@ -208,6 +208,21 @@ func (c *ExponentialBackoff) Backoff(attempt int) time.Duration {
 	return time.Duration(backoff)
 }
 
+// NoBackoff returns a Backoffer with zero backoff, and zero delay between retries.
+func NoBackoff() *ExponentialBackoff {
+	return &ExponentialBackoff{}
+}
+
+// ConstantBackoff returns a Backoffer with a fixed, constant delay between retries and no jitter.
+func ConstantBackoff(delay time.Duration) *ExponentialBackoff {
+	return &ExponentialBackoff{BaseDelay: delay}
+}
+
+// ConstantBackoffWithJitter returns a Backoffer with a fixed, constant delay between retries with 20% jitter.
+func ConstantBackoffWithJitter(delay time.Duration) *ExponentialBackoff {
+	return &ExponentialBackoff{BaseDelay: delay, Jitter: 0.2}
+}
+
 // Retry retries the http request under certain conditions.  The number of retries,
 // retry conditions, and the time to sleep between retries can be configured.  If
 // config is nil, the DefaultRetryConfig will be used.
