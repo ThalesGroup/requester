@@ -120,9 +120,8 @@ type Requester struct {
 	// Defaults to http.DefaultClient.
 	Doer Doer
 
-	// Middleware wraps the Doer.  Middleware will be invoked in the order
-	// it is in this slice: the first middleware in the slice will be
-	// the innermost middleware.
+	// Middleware wraps the Doer.  The middleware is ordered from outermost
+	// to innermost.
 	Middleware []Middleware
 
 	// Unmarshaler will be used by the Receive methods to unmarshal
