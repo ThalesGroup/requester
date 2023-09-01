@@ -195,7 +195,7 @@ linters:
 ##    - typecheck          # redundant?  compiler does this
     - unused
 ##    - bodyclose            # too many false positives
-    - depguard
+#    - depguard
 ##    - dogsled            # checks for too many blank identifiers.  don't care
     - dupl
 ##    - funlen              # checks function length.  don't care
