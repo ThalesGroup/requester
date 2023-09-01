@@ -92,7 +92,7 @@ type JSONMarshaler struct {
 }
 
 // Unmarshal implements Unmarshaler.
-func (m *JSONMarshaler) Unmarshal(data []byte, contentType string, v interface{}) error {
+func (m *JSONMarshaler) Unmarshal(data []byte, _ string, v interface{}) error {
 	return merry.Wrap(json.Unmarshal(data, v))
 }
 
@@ -124,7 +124,7 @@ type XMLMarshaler struct {
 }
 
 // Unmarshal implements Unmarshaler.
-func (*XMLMarshaler) Unmarshal(data []byte, contentType string, v interface{}) error {
+func (*XMLMarshaler) Unmarshal(data []byte, _ string, v interface{}) error {
 	return merry.Wrap(xml.Unmarshal(data, v))
 }
 

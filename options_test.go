@@ -447,11 +447,11 @@ func TestBody(t *testing.T) {
 
 type testMarshaler struct{}
 
-func (*testMarshaler) Unmarshal(data []byte, contentType string, v interface{}) error {
+func (*testMarshaler) Unmarshal(_ []byte, _ string, _ interface{}) error {
 	panic("implement me")
 }
 
-func (*testMarshaler) Marshal(v interface{}) (data []byte, contentType string, err error) {
+func (*testMarshaler) Marshal(_ interface{}) (data []byte, contentType string, err error) {
 	panic("implement me")
 }
 

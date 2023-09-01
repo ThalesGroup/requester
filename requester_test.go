@@ -653,20 +653,20 @@ func BenchmarkRequester_Receive(b *testing.B) {
 
 }
 
-func TestEverything(t *testing.T) {
-
-	type Resource struct {
-		ID    string `json:"id"`
-		Color string `json:"color"`
-	}
-
-	s := httptest.NewServer(MockHandler(201,
-		JSON(true),
-		Body(&Resource{Color: "red", ID: "123"}),
-	))
-	defer s.Close()
-
-}
+// func TestEverything(t *testing.T) {
+//
+// 	type Resource struct {
+// 		ID    string `json:"id"`
+// 		Color string `json:"color"`
+// 	}
+//
+// 	s := httptest.NewServer(MockHandler(201,
+// 		JSON(true),
+// 		Body(&Resource{Color: "red", ID: "123"}),
+// 	))
+// 	defer s.Close()
+//
+// }
 
 func ExampleRequester_Receive() {
 	r := MustNew(MockDoer(200,
@@ -724,7 +724,7 @@ func ExampleRequester_Request() {
 	fmt.Println("X-Color:", req.Header.Get("X-Color"))
 	io.Copy(os.Stdout, req.Body)
 
-	//Output:
+	// Output:
 	// GET http://api.com/resource?flavor=vanilla HTTP/1.1
 	// Content-Type: application/json
 	// Accept: application/json
