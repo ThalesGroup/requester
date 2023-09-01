@@ -5,7 +5,6 @@ import (
 	"context"
 	"github.com/ansel1/merry"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -406,7 +405,7 @@ func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts .
 
 func readBody(resp *http.Response) ([]byte, error) {
 
-	if resp == nil || resp.Body == nil {
+	if resp == nil || resp.Body == nil || resp.Body == http.NoBody {
 		return nil, nil
 	}
 
@@ -421,15 +420,11 @@ func readBody(resp *http.Response) ([]byte, error) {
 		cl, _ = strconv.ParseInt(cls, 10, 0)
 	}
 
-	if cl == 0 {
-		body, err := ioutil.ReadAll(resp.Body)
-		return body, merry.Prepend(err, "reading response body")
-	}
-
 	buf := bytes.Buffer{}
-	buf.Grow(int(cl))
+	if cl > 0 {
+		buf.Grow(int(cl))
+	}
 	if _, err := buf.ReadFrom(resp.Body); err != nil {
-		err = merry.Wrap(err)
 		return nil, merry.Prepend(err, "reading response body")
 	}
 	return buf.Bytes(), nil
