@@ -2,6 +2,7 @@ package requester
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"github.com/ansel1/merry"
 	"io"
@@ -390,6 +391,20 @@ func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts .
 
 	if bodyReadError != nil {
 		return resp, body, bodyReadError
+	}
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+
+		reader := bytes.NewReader(body)
+
+		gzipReader, err := gzip.NewReader(reader)
+		if err != nil {
+			return resp, body, err
+		}
+		defer gzipReader.Close()
+		body, err = io.ReadAll(gzipReader)
+		if err != nil {
+			return resp, body, err
+		}
 	}
 
 	if into != nil {
