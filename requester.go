@@ -379,7 +379,21 @@ func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts .
 	}
 
 	resp, err = r.SendContext(ctx)
-
+	if resp != nil && resp.Header.Get("Content-Encoding") == "gzip" {
+		gr, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			resp.Body.Close()
+			return nil, nil, err
+		}
+		// Replace the original Body with the decompressed reader
+		resp.Body = struct {
+			io.Reader
+			io.Closer
+		}{
+			Reader: gr,
+			Closer: resp.Body, // we keep closing the original
+		}
+	}
 	// Due to middleware, there are cases where both a response *and* and error
 	// are returned.  We need to make sure we handle the body, if present, even when
 	// an error was returned.
@@ -391,20 +405,6 @@ func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts .
 
 	if bodyReadError != nil {
 		return resp, body, bodyReadError
-	}
-	if resp.Header.Get("Content-Encoding") == "gzip" {
-
-		reader := bytes.NewReader(body)
-
-		gzipReader, err := gzip.NewReader(reader)
-		if err != nil {
-			return resp, body, err
-		}
-		defer gzipReader.Close()
-		body, err = io.ReadAll(gzipReader)
-		if err != nil {
-			return resp, body, err
-		}
 	}
 
 	if into != nil {
