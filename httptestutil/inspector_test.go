@@ -66,7 +66,7 @@ func TestInspector_NextExchange(t *testing.T) {
 
 	var count int
 
-	ts := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.WriteHeader(201)
 		writer.Write([]byte("pong" + strconv.Itoa(count)))
 		count++
@@ -100,7 +100,7 @@ func TestInspector_LastExchange(t *testing.T) {
 	defer ts.Close()
 
 	var count int
-	ts.Config.Handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	ts.Config.Handler = http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.WriteHeader(201)
 		writer.Write([]byte("pong" + strconv.Itoa(count)))
 		count++
@@ -125,7 +125,7 @@ func TestInspector_Drain(t *testing.T) {
 	defer ts.Close()
 
 	var count int
-	ts.Config.Handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	ts.Config.Handler = http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.WriteHeader(201)
 		writer.Write([]byte("pong" + strconv.Itoa(count)))
 		count++
@@ -149,7 +149,7 @@ func TestInspector_Clear(t *testing.T) {
 	defer ts.Close()
 
 	var count int
-	ts.Config.Handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	ts.Config.Handler = http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.WriteHeader(201)
 		writer.Write([]byte("pong" + strconv.Itoa(count)))
 		count++
@@ -178,7 +178,7 @@ func TestInspector_Clear(t *testing.T) {
 
 func TestInspector_readFrom(t *testing.T) {
 	// fixed a bug in the hook func's ReadFrom hook.
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set(requester.HeaderContentType, requester.MediaTypeJSON)
 		w.WriteHeader(201)
 		readerFrom := w.(io.ReaderFrom)
@@ -220,7 +220,7 @@ func ExampleInspector_Wrap() {
 func ExampleInspector_NextExchange() {
 	i := NewInspector(0)
 
-	var h http.Handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	var h http.Handler = http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Write([]byte(`pong`))
 	})
 
@@ -245,7 +245,7 @@ func ExampleInspector_NextExchange() {
 func ExampleInspector_LastExchange() {
 	i := NewInspector(0)
 
-	var h http.Handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	var h http.Handler = http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Write([]byte(`pong`))
 	})
 

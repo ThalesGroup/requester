@@ -237,7 +237,7 @@ func TestRequester_Request_Marshaler(t *testing.T) {
 	require.Equal(t, "orange", req.Header.Get("Content-Type"))
 
 	t.Run("errors", func(t *testing.T) {
-		reqs.Marshaler = MarshalFunc(func(v interface{}) ([]byte, string, error) {
+		reqs.Marshaler = MarshalFunc(func(_ interface{}) ([]byte, string, error) {
 			return nil, "", errors.New("boom")
 		})
 		_, err := reqs.RequestContext(context.Background())
@@ -380,7 +380,7 @@ func TestRequester_Request_options(t *testing.T) {
 func TestRequester_SendContext(t *testing.T) {
 
 	// SendContext() just creates a request and sends it to the Doer.  That's all we're confirming here
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(204)
 	}))
 	defer ts.Close()
@@ -416,7 +416,7 @@ func TestRequester_Receive_withopts(t *testing.T) {
 	// ensure that options with modify how the response is handled are applied
 	// correctly
 
-	ts := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Write([]byte("blue"))
 	}))
 	defer ts.Close()
@@ -425,7 +425,7 @@ func TestRequester_Receive_withopts(t *testing.T) {
 
 	_, _, err := MustNew(
 		Get(ts.URL, "/profile"),
-		UnmarshalFunc(func(data []byte, contentType string, v interface{}) error {
+		UnmarshalFunc(func(_ []byte, _ string, _ interface{}) error {
 			called = true
 			return nil
 		}),
@@ -442,13 +442,13 @@ func TestRequester_ReceiveContext(t *testing.T) {
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
 
-	mux.HandleFunc("/model.json", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/model.json", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(206)
 		w.Write([]byte(`{"color":"green","count":25}`))
 	})
 
-	mux.HandleFunc("/err", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/err", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(500)
 		w.Write([]byte(`{"color":"red","count":30}`))
@@ -511,7 +511,7 @@ func TestRequester_ReceiveContext(t *testing.T) {
 
 	t.Run("acceptoptionsforintoargs", func(t *testing.T) {
 
-		mux.HandleFunc("/blue", func(writer http.ResponseWriter, request *http.Request) {
+		mux.HandleFunc("/blue", func(writer http.ResponseWriter, _ *http.Request) {
 			writer.WriteHeader(208)
 		})
 
@@ -561,7 +561,7 @@ func BenchmarkRequester_Receive(b *testing.B) {
 
 	inputJSON := `{"color":"blue","count":10,"flavor":"vanilla","important":true}`
 	h := map[string][]string{"Content-Type": {"application/json"}, "Content-Length": {strconv.Itoa(len([]byte(inputJSON)))}}
-	var mockServer DoerFunc = func(req *http.Request) (*http.Response, error) {
+	var mockServer DoerFunc = func(_ *http.Request) (*http.Response, error) {
 		resp := &http.Response{
 			StatusCode: 200,
 			Header:     h,

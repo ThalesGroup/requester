@@ -124,7 +124,7 @@ func TestDumpToSterr(t *testing.T) {
 
 func TestExpectCode(t *testing.T) {
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(407)
 		w.Write([]byte("boom!"))
 	}))
@@ -169,7 +169,7 @@ func TestExpectSuccessCode(t *testing.T) {
 
 	codeToReturn := 407
 	bodyToReturn := "boom!"
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(codeToReturn)
 		_, _ = w.Write([]byte(bodyToReturn))
 	}))

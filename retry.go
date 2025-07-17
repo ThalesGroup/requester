@@ -15,11 +15,13 @@ import (
 )
 
 // DefaultRetryConfig is the default retry configuration used if nil is passed to Retry().
-// nolint:gochecknoglobals
+//
+//nolint:gochecknoglobals
 var DefaultRetryConfig = RetryConfig{}
 
 // DefaultBackoff is a backoff configuration with the default values.
-// nolint:gochecknoglobals
+//
+//nolint:gochecknoglobals
 var DefaultBackoff = ExponentialBackoff{
 	BaseDelay:  1.0 * time.Second,
 	Multiplier: 1.6,
@@ -194,7 +196,7 @@ func (c *ExponentialBackoff) Backoff(attempt int) time.Duration {
 	backoff = math.Max(0, backoff)
 
 	if c.Jitter > 0 {
-		// nolint:gosec
+		//nolint:gosec
 		backoff *= 1 + c.Jitter*(rand.Float64()*2-1)
 		if c.MaxDelay > 0 {
 			if delta := backoff - maxDelayf; delta > 0 {

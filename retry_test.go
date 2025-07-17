@@ -2,7 +2,7 @@ package requester_test
 
 import (
 	"context"
-	. "github.com/gemalto/requester"
+	. "github.com/gemalto/requester" //nolint:revive
 	"github.com/gemalto/requester/httptestutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -459,7 +459,7 @@ func TestRetry_shouldRetry(t *testing.T) {
 	// test a custom ShouldRetry function.  also test that Retry calls the ShouldRetry function
 	// with the right args.
 	var srvCount int
-	s := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	s := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		srvCount++
 		writer.WriteHeader(501 + srvCount)
 		writer.Write([]byte("fudge"))
@@ -474,7 +474,7 @@ func TestRetry_shouldRetry(t *testing.T) {
 	r := httptestutil.Requester(s, Retry(&RetryConfig{
 		MaxAttempts: 4,
 		Backoff:     &ExponentialBackoff{BaseDelay: 0},
-		ShouldRetry: ShouldRetryerFunc(func(attempt int, req *http.Request, resp *http.Response, err error) bool {
+		ShouldRetry: ShouldRetryerFunc(func(attempt int, req *http.Request, resp *http.Response, _ error) bool {
 			count++
 			attempts = append(attempts, attempt)
 			reqs = append(reqs, req)
@@ -560,7 +560,7 @@ func TestRetry_readResponse(t *testing.T) {
 	newRequester := func() *Requester {
 		r, err := New(
 			Retry(&retryConfig),
-			WithDoer(DoerFunc(func(req *http.Request) (*http.Response, error) {
+			WithDoer(DoerFunc(func(_ *http.Request) (*http.Response, error) {
 				count++
 				// I can't cause a real connection reset error using httptest, so I need to simulate
 				// it with a fake Doer.  https://groups.google.com/g/golang-nuts/c/AtxmEDJ4zvc

@@ -12,7 +12,7 @@ import (
 // NoRedirects configures the client to no perform any redirects.
 func NoRedirects() Option {
 	return OptionFunc(func(client *http.Client) error {
-		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse
 		}
 		return nil
@@ -23,7 +23,7 @@ func NoRedirects() Option {
 // giving up.
 func MaxRedirects(max int) Option {
 	return OptionFunc(func(client *http.Client) error {
-		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		client.CheckRedirect = func(_ *http.Request, via []*http.Request) error {
 			if len(via) >= max {
 				return merry.Errorf("stopped after max %d requests", len(via))
 			}
@@ -54,7 +54,7 @@ func ProxyURL(proxyURL string) Option {
 		if err != nil {
 			return merry.Wrap(err)
 		}
-		t.Proxy = func(request *http.Request) (*url.URL, error) {
+		t.Proxy = func(_ *http.Request) (*url.URL, error) {
 			return u, nil
 		}
 		return nil

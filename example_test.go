@@ -2,7 +2,7 @@ package requester_test
 
 import (
 	"fmt"
-	. "github.com/gemalto/requester"
+	. "github.com/gemalto/requester" //nolint:revive
 	"github.com/gemalto/requester/httpclient"
 	"github.com/gemalto/requester/httptestutil"
 	"net/http"
@@ -12,7 +12,7 @@ import (
 )
 
 func Example() {
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
 		w.Write([]byte(`{"color":"red"}`))
@@ -32,7 +32,7 @@ func Example() {
 }
 
 func Example_receive() {
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
 		w.Write([]byte(`{"color":"red"}`))
