@@ -98,7 +98,7 @@ func MockHandler(statusCode int, options ...Option) http.Handler {
 func ChannelHandler() (chan<- *http.Response, http.Handler) {
 	input := make(chan *http.Response, 1)
 
-	return input, http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	return input, http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		resp := <-input
 
 		h := writer.Header()

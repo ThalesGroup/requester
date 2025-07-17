@@ -6,7 +6,8 @@ import (
 )
 
 // DefaultRequester is the singleton used by the package-level Request/Send/Receive functions.
-// nolint:gochecknoglobals
+//
+//nolint:gochecknoglobals
 var DefaultRequester = Requester{}
 
 // Request uses the DefaultRequester to create a request.

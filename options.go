@@ -69,11 +69,11 @@ func (r *Requester) With(opts ...Option) (*Requester, error) {
 //	r2 := r.Clone()
 //	r2.MustApply(...)
 func (r *Requester) MustWith(opts ...Option) *Requester {
-	if r2, err := r.With(opts...); err != nil {
+	r2, err := r.With(opts...)
+	if err != nil {
 		panic(err)
-	} else {
-		return r2
 	}
+	return r2
 }
 
 // Apply applies the options to the receiver.
