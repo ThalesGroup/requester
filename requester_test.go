@@ -2,7 +2,6 @@ package requester
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -454,15 +453,6 @@ func TestRequester_ReceiveContext(t *testing.T) {
 		w.WriteHeader(500)
 		w.Write([]byte(`{"color":"red","count":30}`))
 	})
-	mux.HandleFunc("/compressed", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Content-Encoding", "gzip")
-		w.WriteHeader(200)
-		gz := gzip.NewWriter(w)
-		defer gz.Close()
-		_, err := gz.Write([]byte(`{"color":"green","count":25}`))
-		require.NoError(t, err)
-	})
 
 	t.Run("success", func(t *testing.T) {
 		cases := []struct {
@@ -539,18 +529,6 @@ func TestRequester_ReceiveContext(t *testing.T) {
 		ctx := context.Background()
 		resp, _, _ = r.ReceiveContext(ctx, Get("/blue"))
 		assert.Equal(t, 208, resp.StatusCode)
-	})
-	t.Run("success-gzip-compressed", func(t *testing.T) {
-
-		resp, body, err := ReceiveContext(
-			context.WithValue(context.Background(), colorContextKey, "purple"),
-			Header("Accept-Encoding", "gzip"),
-			Post(ts.URL, "/compressed"),
-		)
-		require.NoError(t, err)
-		assert.Equal(t, 200, resp.StatusCode)
-		assert.Equal(t, resp.Header.Get("Content-Encoding"), "gzip")
-		assert.Equal(t, `{"color":"green","count":25}`, string(body))
 	})
 }
 

@@ -2,7 +2,6 @@ package requester
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"github.com/ansel1/merry"
 	"io"
@@ -379,21 +378,7 @@ func (r *Requester) ReceiveContext(ctx context.Context, into interface{}, opts .
 	}
 
 	resp, err = r.SendContext(ctx)
-	if resp != nil && resp.Header.Get("Content-Encoding") == "gzip" {
-		gr, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			resp.Body.Close()
-			return nil, nil, err
-		}
-		// Replace the original Body with the decompressed reader
-		resp.Body = struct {
-			io.Reader
-			io.Closer
-		}{
-			Reader: gr,
-			Closer: resp.Body, // we keep closing the original
-		}
-	}
+
 	// Due to middleware, there are cases where both a response *and* and error
 	// are returned.  We need to make sure we handle the body, if present, even when
 	// an error was returned.

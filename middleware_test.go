@@ -2,6 +2,8 @@ package requester
 
 import (
 	"bytes"
+	"compress/gzip"
+	"context"
 	"fmt"
 	"github.com/ansel1/merry"
 	"github.com/stretchr/testify/assert"
@@ -259,4 +261,47 @@ func ExampleExpectCode() {
 	fmt.Println(err.Error())
 
 	// Output: server returned unexpected status code.  expected: 201, received: 400
+}
+
+func TestGUnzip(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Encoding", "gzip")
+		w.WriteHeader(200)
+		gz := gzip.NewWriter(w)
+		defer gz.Close()
+		_, err := gz.Write([]byte(`{"color":"green","count":25}`))
+		require.NoError(t, err)
+	}))
+	t.Cleanup(ts.Close)
+
+	t.Run("without middleware", func(t *testing.T) {
+		resp, body, err := ReceiveContext(context.Background(),
+			Header("Accept-Encoding", "gzip"),
+			Get(ts.URL, "/"),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.Equal(t, resp.Header.Get("Content-Encoding"), "gzip")
+		assert.Greater(t, resp.ContentLength, int64(0))
+		assert.NotEmpty(t, resp.Header.Get("Content-Length"))
+		assert.Equal(t, `{"color":"green","count":25}`, string(body))
+		assert.False(t, resp.Uncompressed)
+	})
+
+	t.Run("with middleware", func(t *testing.T) {
+		resp, body, err := ReceiveContext(context.Background(),
+			Decompress(),
+			Header("Accept-Encoding", "gzip"),
+			Get(ts.URL, "/"),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.Empty(t, resp.Header.Get("Content-Encoding"))
+		assert.Equal(t, resp.ContentLength, int64(-1))
+		assert.Empty(t, resp.Header.Get("Content-Length"))
+		assert.Equal(t, `{"color":"green","count":25}`, string(body))
+		assert.True(t, resp.Uncompressed)
+	})
+
 }
