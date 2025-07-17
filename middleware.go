@@ -1,12 +1,15 @@
 package requester
 
 import (
+	"compress/gzip"
 	"context"
-	"github.com/ansel1/merry"
 	"io"
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"strings"
+
+	"github.com/ansel1/merry"
 )
 
 // Middleware can be used to wrap Doers with additional functionality.
@@ -146,4 +149,53 @@ func getCodeChecker(req *http.Request) (*http.Request, *codeChecker) {
 		req = req.WithContext(context.WithValue(req.Context(), expectCodeCtxKey, c))
 	}
 	return req, c
+}
+
+// Decompress middleware will decompress the response body if the response
+// Content-Type indicates the body is compressed.
+//
+// Normally, this is not needed.  Golang's default HTTP transport
+// automatically requests compression and automatically decompresses
+// the response.  However, the transport will only auto-decompress if
+// it originally requested the compression.
+//
+// Cases where this middleware is needed:
+//   - if the Accept-Encoding header is explicitly set to "gzip" by the
+//     caller, the transport will not do any automatic compression processing
+//   - if the server returns compressed responses even when compression
+//     was not requested by the client (i.e. the Accept-Encoding header was
+//     not set on the request).  Technically, servers should not use
+//     compression unless the client requests it, but some servers are
+//     known to violate this rule.
+//
+// This middleware currently only support gzip compression.
+func Decompress() Middleware {
+	return func(d Doer) Doer {
+		return DoerFunc(func(req *http.Request) (*http.Response, error) {
+			resp, err := d.Do(req)
+			if err != nil || resp == nil {
+				return resp, err
+			}
+			if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
+				gr, err := gzip.NewReader(resp.Body)
+				if err != nil {
+					resp.Body.Close()
+					return nil, err
+				}
+				// Replace the original Body with the decompressed reader
+				resp.Body = struct {
+					io.Reader
+					io.Closer
+				}{
+					Reader: gr,
+					Closer: resp.Body, // we keep closing the original
+				}
+				resp.Header.Del("Content-Encoding")
+				resp.Header.Del("Content-Length")
+				resp.ContentLength = -1
+				resp.Uncompressed = true
+			}
+			return resp, err
+		})
+	}
 }
