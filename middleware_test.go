@@ -2,10 +2,9 @@ package requester
 
 import (
 	"bytes"
+	"compress/gzip"
+	"context"
 	"fmt"
-	"github.com/ansel1/merry"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	sdklog "log"
 	"net/http"
@@ -13,6 +12,10 @@ import (
 	"net/http/httputil"
 	"os"
 	"testing"
+
+	"github.com/ansel1/merry"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDump(t *testing.T) {
@@ -197,6 +200,49 @@ func TestExpectSuccessCode(t *testing.T) {
 		_, _, err := Receive(Get(ts.URL), ExpectSuccessCode())
 		require.NoError(t, err, "should not have received an error for code %v", code)
 	}
+}
+
+func TestGUnzip(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Encoding", "gzip")
+		w.WriteHeader(200)
+		gz := gzip.NewWriter(w)
+		defer gz.Close()
+		_, err := gz.Write([]byte(`{"color":"green","count":25}`))
+		require.NoError(t, err)
+	}))
+	t.Cleanup(ts.Close)
+
+	t.Run("without middleware", func(t *testing.T) {
+		resp, body, err := ReceiveContext(context.Background(),
+			Header("Accept-Encoding", "gzip"),
+			Get(ts.URL, "/"),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.Equal(t, resp.Header.Get("Content-Encoding"), "gzip")
+		assert.Greater(t, resp.ContentLength, int64(0))
+		assert.NotEmpty(t, resp.Header.Get("Content-Length"))
+		assert.NotEqual(t, `{"color":"green","count":25}`, string(body))
+		assert.False(t, resp.Uncompressed)
+	})
+
+	t.Run("with middleware", func(t *testing.T) {
+		resp, body, err := ReceiveContext(context.Background(),
+			Decompress(),
+			Header("Accept-Encoding", "gzip"),
+			Get(ts.URL, "/"),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.Empty(t, resp.Header.Get("Content-Encoding"))
+		assert.Equal(t, resp.ContentLength, int64(-1))
+		assert.Empty(t, resp.Header.Get("Content-Length"))
+		assert.Equal(t, `{"color":"green","count":25}`, string(body))
+		assert.True(t, resp.Uncompressed)
+	})
+
 }
 
 func ExampleMiddleware() {
