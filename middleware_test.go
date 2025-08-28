@@ -5,9 +5,6 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"github.com/ansel1/merry"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	sdklog "log"
 	"net/http"
@@ -15,6 +12,10 @@ import (
 	"net/http/httputil"
 	"os"
 	"testing"
+
+	"github.com/ansel1/merry"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDump(t *testing.T) {
@@ -264,13 +265,18 @@ func ExampleExpectCode() {
 }
 
 func TestGUnzip(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	buf := bytes.NewBuffer(nil)
+	gz := gzip.NewWriter(buf)
+	t.Cleanup(func() { gz.Close() })
+	_, err := gz.Write([]byte(`{"color":"green","count":25}`))
+	require.NoError(t, err)
+	require.NoError(t, gz.Close())
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Content-Encoding", "gzip")
 		w.WriteHeader(200)
-		gz := gzip.NewWriter(w)
-		defer gz.Close()
-		_, err := gz.Write([]byte(`{"color":"green","count":25}`))
+		w.Write(buf.Bytes())
 		require.NoError(t, err)
 	}))
 	t.Cleanup(ts.Close)
@@ -285,7 +291,7 @@ func TestGUnzip(t *testing.T) {
 		assert.Equal(t, resp.Header.Get("Content-Encoding"), "gzip")
 		assert.Greater(t, resp.ContentLength, int64(0))
 		assert.NotEmpty(t, resp.Header.Get("Content-Length"))
-		assert.Equal(t, `{"color":"green","count":25}`, string(body))
+		assert.Equal(t, buf.Bytes(), body)
 		assert.False(t, resp.Uncompressed)
 	})
 

@@ -3,12 +3,13 @@ package requester
 import (
 	"bytes"
 	"context"
-	"github.com/ansel1/merry"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/ansel1/merry"
 )
 
 // Requester is an HTTP request builder and HTTP client.
