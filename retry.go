@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/ansel1/merry"
 	"io"
-	"io/ioutil"
 	"math"
 	"math/rand"
 	"net"
@@ -349,5 +348,5 @@ func drain(r io.ReadCloser) {
 		_ = r.Close()
 	}(r)
 
-	_, _ = io.Copy(ioutil.Discard, io.LimitReader(r, 4096))
+	_, _ = io.Copy(io.Discard, io.LimitReader(r, 4096))
 }

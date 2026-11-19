@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"github.com/felixge/httpsnoop"
 	"io"
-	"io/ioutil"
 	"net/http"
 )
 
@@ -110,7 +109,7 @@ func (b *Inspector) Wrap(next http.Handler) http.Handler {
 				panic(err)
 			}
 
-			r.Body = ioutil.NopCloser(bytes.NewReader(ex.RequestBody.Bytes()))
+			r.Body = io.NopCloser(bytes.NewReader(ex.RequestBody.Bytes()))
 		} else {
 			ex.RequestBody = nil
 		}

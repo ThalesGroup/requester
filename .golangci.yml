@@ -10,7 +10,7 @@ linters:
     - gochecknoinits
     - goconst
     - gocritic
-    - gomodguard
+    - gomodguard_v2
     - gosec
     - govet
     - ineffassign
@@ -45,16 +45,15 @@ linters:
       min-occurrences: 3
     gocyclo:
       min-complexity: 10
-    gomodguard:
+    gomodguard_v2:
       blocked:
-        modules:
-          - gopkg.in/go-playground/assert.v1:
-              recommendations:
-                - github.com/stretchr/testify
-              reason: testify is the test assertion framework we use
-          - github.com/pborman/uuid:
-              recommendations:
-                - github.com/google/uuid
+        - module: gopkg.in/go-playground/assert.v1
+          recommendations:
+            - github.com/stretchr/testify
+          reason: testify is the test assertion framework we use
+        - module: github.com/pborman/uuid
+          recommendations:
+            - github.com/google/uuid
     misspell:
       locale: US
     prealloc:
@@ -74,6 +73,7 @@ linters:
           - errcheck
           - gochecknoglobals
           - gochecknoinits
+          - goconst
           - gocyclo
           - gosec
         path: _test\.go

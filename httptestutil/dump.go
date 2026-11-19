@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/felixge/httpsnoop"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -42,7 +41,7 @@ func DumpTo(handler http.Handler, writer io.Writer) http.Handler {
 			ProtoMinor:    r.ProtoMinor,
 			StatusCode:    ex.StatusCode,
 			Header:        w.Header(),
-			Body:          ioutil.NopCloser(bytes.NewReader(ex.ResponseBody.Bytes())),
+			Body:          io.NopCloser(bytes.NewReader(ex.ResponseBody.Bytes())),
 			ContentLength: int64(ex.ResponseBody.Len()),
 		}
 
