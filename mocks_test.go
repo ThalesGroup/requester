@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -59,7 +59,7 @@ func TestMockResponse(t *testing.T) {
 	assert.Equal(t, 201, resp.StatusCode)
 	assert.Contains(t, resp.Header.Get(HeaderContentType), MediaTypeJSON)
 
-	b, _ := ioutil.ReadAll(resp.Body)
+	b, _ := io.ReadAll(resp.Body)
 	assert.JSONEq(t, `{"color":"red"}`, string(b))
 
 	resp = MockResponse(500)
@@ -85,7 +85,7 @@ func TestMockDoer(t *testing.T) {
 
 	assert.Contains(t, resp.Header.Get(HeaderContentType), MediaTypeJSON)
 
-	b, _ := ioutil.ReadAll(resp.Body)
+	b, _ := io.ReadAll(resp.Body)
 	assert.JSONEq(t, `{"color":"blue"}`, string(b))
 }
 
@@ -110,7 +110,7 @@ func TestChannelDoer(t *testing.T) {
 
 	assert.Contains(t, resp.Header.Get(HeaderContentType), MediaTypeJSON)
 
-	b, _ := ioutil.ReadAll(resp.Body)
+	b, _ := io.ReadAll(resp.Body)
 	assert.JSONEq(t, `{"color":"blue"}`, string(b))
 }
 
@@ -160,7 +160,7 @@ func ExampleChannelDoer() {
 
 	in <- &http.Response{
 		StatusCode: 201,
-		Body:       ioutil.NopCloser(strings.NewReader("pong")),
+		Body:       io.NopCloser(strings.NewReader("pong")),
 	}
 
 	resp, body, _ := Receive(d)
@@ -181,7 +181,7 @@ func ExampleChannelHandler() {
 
 	in <- &http.Response{
 		StatusCode: 201,
-		Body:       ioutil.NopCloser(strings.NewReader("pong")),
+		Body:       io.NopCloser(strings.NewReader("pong")),
 	}
 
 	resp, body, _ := Receive(URL(ts.URL))

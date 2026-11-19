@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
+	"io"
 	"net/url"
 	"testing"
 )
@@ -229,7 +229,7 @@ func ExampleFormMarshaler() {
 	// which accept Options.
 	req, _ := Request(&FormMarshaler{}, Body(url.Values{"color": []string{"red"}}))
 
-	b, _ := ioutil.ReadAll(req.Body)
+	b, _ := io.ReadAll(req.Body)
 
 	fmt.Println(string(b))
 	fmt.Println(req.Header.Get(HeaderContentType))
@@ -244,7 +244,7 @@ func ExampleJSONMarshaler() {
 	// which accept Options.
 	req, _ := Request(&JSONMarshaler{Indent: false}, Body(map[string]interface{}{"color": "red"}))
 
-	b, _ := ioutil.ReadAll(req.Body)
+	b, _ := io.ReadAll(req.Body)
 
 	fmt.Println(string(b))
 	fmt.Println(req.Header.Get(HeaderContentType))
@@ -263,7 +263,7 @@ func ExampleXMLMarshaler() {
 	// which accept Options.
 	req, _ := Request(&XMLMarshaler{Indent: false}, Body(Resource{Color: "red"}))
 
-	b, _ := ioutil.ReadAll(req.Body)
+	b, _ := io.ReadAll(req.Body)
 
 	fmt.Println(string(b))
 	fmt.Println(req.Header.Get(HeaderContentType))

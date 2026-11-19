@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -16,10 +16,10 @@ func TestInspector(t *testing.T) {
 	var dumpedReqBody []byte
 
 	var doer DoerFunc = func(req *http.Request) (*http.Response, error) {
-		dumpedReqBody, _ = ioutil.ReadAll(req.Body)
+		dumpedReqBody, _ = io.ReadAll(req.Body)
 		resp := &http.Response{
 			StatusCode: 201,
-			Body:       ioutil.NopCloser(strings.NewReader("pong")),
+			Body:       io.NopCloser(strings.NewReader("pong")),
 		}
 		return resp, nil
 	}

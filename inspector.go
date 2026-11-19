@@ -2,7 +2,7 @@ package requester
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 )
 
@@ -58,17 +58,17 @@ func (i *Inspector) Wrap(next Doer) Doer {
 		i.Request = req
 		// capture the body
 		if req.Body != nil {
-			reqBody, _ := ioutil.ReadAll(req.Body)
+			reqBody, _ := io.ReadAll(req.Body)
 			req.Body.Close()
-			req.Body = ioutil.NopCloser(bytes.NewReader(reqBody))
+			req.Body = io.NopCloser(bytes.NewReader(reqBody))
 			i.RequestBody = bytes.NewBuffer(reqBody)
 		}
 		resp, err := next.Do(req)
 		i.Response = resp
 		if resp != nil && resp.Body != nil {
-			respBody, _ := ioutil.ReadAll(resp.Body)
+			respBody, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
-			resp.Body = ioutil.NopCloser(bytes.NewReader(respBody))
+			resp.Body = io.NopCloser(bytes.NewReader(respBody))
 			i.ResponseBody = bytes.NewBuffer(respBody)
 		}
 		return resp, err

@@ -1,6 +1,6 @@
 module github.com/gemalto/requester
 
-go 1.14
+go 1.16
 
 require (
 	github.com/ansel1/merry v1.5.1

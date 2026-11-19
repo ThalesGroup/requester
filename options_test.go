@@ -6,7 +6,7 @@ import (
 	"github.com/gemalto/requester/httpclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -594,7 +594,7 @@ func ExampleBody() {
 
 	req, _ := Request(Body(v))
 
-	b, _ := ioutil.ReadAll(req.Body)
+	b, _ := io.ReadAll(req.Body)
 
 	fmt.Println(string(b))
 
@@ -606,7 +606,7 @@ func ExampleBody() {
 func ExampleBody_map() {
 	req, _ := Request(Body(map[string]interface{}{"color": "red"}))
 
-	b, _ := ioutil.ReadAll(req.Body)
+	b, _ := io.ReadAll(req.Body)
 
 	fmt.Println(string(b))
 
@@ -621,7 +621,7 @@ func ExampleBody_raw() {
 		Body(strings.NewReader("red")),
 	)
 
-	b, _ := ioutil.ReadAll(req.Body)
+	b, _ := io.ReadAll(req.Body)
 
 	fmt.Println(string(b))
 

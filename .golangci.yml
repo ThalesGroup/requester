@@ -73,6 +73,7 @@ linters:
           - errcheck
           - gochecknoglobals
           - gochecknoinits
+          - goconst
           - gocyclo
           - gosec
         path: _test\.go

@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -231,7 +230,7 @@ func TestRequester_Request_Marshaler(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, []string{"blue"}, capturedV)
-	by, err := ioutil.ReadAll(req.Body)
+	by, err := io.ReadAll(req.Body)
 	require.NoError(t, err)
 	require.Equal(t, "red", string(by))
 	require.Equal(t, "orange", req.Header.Get("Content-Type"))
@@ -268,19 +267,19 @@ func TestRequester_Request_GetBody(t *testing.T) {
 	// GetBody should be populated automatically
 	rdr, err := req.GetBody()
 	require.NoError(t, err)
-	bts, err := ioutil.ReadAll(rdr)
+	bts, err := io.ReadAll(rdr)
 	require.NoError(t, err)
 	require.Equal(t, "1234", string(bts))
 
 	// I should be able to override it
 	reqs.GetBody = func() (io.ReadCloser, error) {
-		return ioutil.NopCloser(strings.NewReader("5678")), nil
+		return io.NopCloser(strings.NewReader("5678")), nil
 	}
 	req, err = reqs.RequestContext(context.Background())
 	require.NoError(t, err)
 	rdr, err = req.GetBody()
 	require.NoError(t, err)
-	bts, err = ioutil.ReadAll(rdr)
+	bts, err = io.ReadAll(rdr)
 	require.NoError(t, err)
 	require.Equal(t, "5678", string(bts))
 }
@@ -565,7 +564,7 @@ func BenchmarkRequester_Receive(b *testing.B) {
 		resp := &http.Response{
 			StatusCode: 200,
 			Header:     h,
-			Body:       ioutil.NopCloser(strings.NewReader(inputJSON)),
+			Body:       io.NopCloser(strings.NewReader(inputJSON)),
 		}
 		return resp, nil
 	}
@@ -589,7 +588,7 @@ func BenchmarkRequester_Receive(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				req, _ := http.NewRequest("GET", "/test", nil)
 				resp, _ := mockServer.Do(req)
-				body, _ := ioutil.ReadAll(resp.Body)
+				body, _ := io.ReadAll(resp.Body)
 				resp.Body.Close()
 				json.Unmarshal(body, &TestStruct{})
 			}
@@ -643,7 +642,7 @@ func BenchmarkRequester_Receive(b *testing.B) {
 				req.Header.Set("X-Over", "Under")
 				req.Header.Set("Content-Type", "application/json")
 				resp, _ := mockServer.Do(req)
-				body, _ := ioutil.ReadAll(resp.Body)
+				body, _ := io.ReadAll(resp.Body)
 				resp.Body.Close()
 				json.Unmarshal(body, &TestStruct{})
 			}
